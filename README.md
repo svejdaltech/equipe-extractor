@@ -29,3 +29,7 @@ uvicorn app.main:app --reload
 Byg til docker:
 sudo docker build -t equipe-exporter .
 sudo docker run -it --rm -p 8000:80 equipe-exporter
+
+
+Byg til Azure Container registry
+az acr build --registry svejdaltech --image equipe-extractor .

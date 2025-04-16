@@ -15,8 +15,8 @@ def get_class_section_details(class_section_id):
 
     try:
         data = response.json()
-        print(f"[DEBUG] Fetched class_section {class_section_id}:")
-        print(data)
+        # print(f"[DEBUG] Fetched class_section {class_section_id}:")
+        # print(data)
         return data
     except Exception as e:
         print(f"[ERROR] Failed to parse JSON for class_section {class_section_id}")
@@ -87,7 +87,7 @@ def parse_schedule(meeting_id):
                 
 
     #print(f"Competitions: {competitions}")
-    print(f"Type: {type(competitions)}")
+   #print(f"Type: {type(competitions)}")
 
     return competitions
 
@@ -120,8 +120,8 @@ def generate_excel(data: list[dict]) -> str:
 
     # Convert list of dicts into a DataFrame
     df = pd.DataFrame(data)
-    print("🔍 DataFrame preview:")
-    print(df.head())
+    # print("🔍 DataFrame preview:")
+    # print(df.head())
 
     # Rearrange columns: preferred ones first, then the rest
     preferred = [col for col in preferred_columns if col in df.columns]
