@@ -1,16 +1,6 @@
 import requests
-import csv
 
-def get_meeting_schedule(meeting_id):
-    url = f"https://online.equipe.com/api/v1/meetings/{meeting_id}/schedule"
-    response = requests.get(url)
-    if response.status_code == 200:
-        return response.json()
-    else:
-        raise Exception(f"Could not fetch meeting schedule: {response.status_code}")
-
-def get_class_section_details(class_section_id):
-    url = f"https://online.equipe.com/api/v1/class_sections/{class_section_id}"
+def get_json(url):
     response = requests.get(url)
 
     try:
@@ -33,13 +23,11 @@ def get_class_section_details(class_section_id):
 
 def parse_schedule(meeting_id):
     competitions = []
-    schedule = get_meeting_schedule(meeting_id)
+    meeting_url = f"https://online.equipe.com/api/v1/meetings/{meeting_id}/schedule"
+    schedule = get_json(meeting_url)
 
     # print("Schedule received:", schedule)
     # print("Type of schedule:", type(schedule))
-
-    # logging.info("Schedule type: %s", type(schedule))
-    # logging.info("Schedule content: %s", schedule)
 
     # Hvis det er en string ved en fejl (fx JSON i string-format), så prøv at parse det
     if isinstance(schedule, str):
@@ -70,7 +58,9 @@ def parse_schedule(meeting_id):
 
         for section in comp.get("class_sections", []):
             class_section_id = section.get("id")
-            section_details = get_class_section_details(class_section_id)
+
+            class_section_url = f"https://online.equipe.com/api/v1/class_sections/{class_section_id}"
+            section_details = get_json(class_section_url)
 
             if section_details and section_details.get("starts"):
                 for start in section_details["starts"]:

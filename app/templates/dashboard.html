@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Dashboard</title>
+</head>
+<body>
+    <h1>Welcome, {{ username }}!</h1>
+
+    <nav>
+        <ul>
+            <li>
+            <input type="text" id="meeting_id" placeholder="Meeting ID">
+
+            <a href="#" id="exportLink">Export meeting</a>
+
+            </li>
+            <!-- Add more menu items here -->
+        </ul>
+    </nav>
+
+    <form action="/logout" method="get">
+        <button type="submit">Log out</button>
+    </form>
+
+    <script>
+        document.getElementById('exportLink').addEventListener('click', function(event) {
+            event.preventDefault(); // stop link from navigating immediately
+
+            const meetingId = document.getElementById('meeting_id').value.trim();
+            if (!meetingId) {
+                alert("Please enter a Meeting ID.");
+                return;
+            }
+
+            // Redirect with meeting_id query parameter
+            window.location.href = `/export?meeting_id=${encodeURIComponent(meetingId)}`;
+        });
+    </script>
+</body>
+</html>

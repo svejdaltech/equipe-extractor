@@ -1,6 +1,10 @@
 # Created by https://gitignore.org
 # Python.gitignore
 
+# Database
+users.db
+.env
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]

@@ -12,5 +12,8 @@ ENV PYTHONPATH=/app
 # Install dependencies
 RUN pip install --no-cache-dir -r /app/app/requirements.txt
 
-# Run the server
-CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "80"]
+# Expose port 8000 internt i containeren
+EXPOSE 8000
+
+# Start FastAPI med uvicorn
+CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]

@@ -3,3 +3,11 @@ uvicorn
 requests
 pandas
 openpyxl
+sqlalchemy
+databases
+jinja2
+python-multipart
+bcrypt
+passlib[bcrypt]
+itsdangerous
+python-jose
