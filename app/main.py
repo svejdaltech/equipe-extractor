@@ -141,6 +141,30 @@ def export_meeting(
     return _export_excel(meeting_id, background_tasks, db)
 
 
+@app.get("/meetings/{meeting_id}/calendar.ics")
+def meeting_calendar_ics(meeting_id: int, request: Request, db: Session = Depends(get_db), _auth: None = Depends(require_auth)):
+    """
+    One-off "add this single event to my calendar" download — unlike the full
+    /calendar/{token}.ics subscription feed, this needs no CALENDAR_TOKEN (it's
+    a one-time browser download behind the same Basic Auth as everything else,
+    not something a calendar app polls unattended).
+    """
+    meeting = db.get(models.Meeting, meeting_id)
+    if meeting is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Unknown meeting_id {meeting_id}")
+
+    base_url = PUBLIC_BASE_URL or str(request.base_url).rstrip("/")
+    ics_body = build_ics([meeting], base_url)
+
+    return Response(
+        content=ics_body,
+        media_type="text/calendar; charset=utf-8",
+        # Plain ASCII filename — Content-Disposition needs RFC 5987 filename* encoding
+        # for non-ASCII characters, not worth the complexity for an internal filename.
+        headers={"Content-Disposition": f'attachment; filename="staevne-{meeting_id}.ics"'},
+    )
+
+
 @app.get("/meetings/{meeting_id}", response_class=HTMLResponse)
 def meeting_checklist(
     request: Request,

@@ -28,6 +28,7 @@ GET  /?meeting_id=<id>                          — download stævnet som Excel
 GET  /meetings/<id>                              — rytter-tjekliste (synker fra Equipe ved hvert kald)
 POST /meetings/<id>/riders/<rider_id>/seen       — marker (eller genmarker) en rytter som "set"
 GET  /meetings/<id>/export                       — samme Excel-download som GET /, linket fra tjeklisten
+GET  /meetings/<id>/calendar.ics                 — download/importér kun dette ene stævne til kalenderen (Basic Auth, intet token)
 GET  /calendar/<CALENDAR_TOKEN>.ics              — kalender-feed, ét stævne per synkroniseret meeting (se #Kalender)
 GET  /settings                                   — indstillinger (pt. Excel-kolonnerækkefølge), se #Excel-kolonner
 
@@ -58,6 +59,10 @@ uden den bruges request'ens eget host, hvilket kan blive forkert bag en reverse 
 Når CALENDAR_TOKEN er sat, viser hvert stævnes tjekliste (/meetings/<id>) også et "Kalender"-link direkte
 på siden (webcal:// for at abonnere med det samme i understøttede apps, plus et almindeligt https-link
 til at kopiere/indsætte manuelt) — ingen grund til at huske eller selv bygge URL'en.
+
+Til at tilføje kun ét enkelt stævne (ikke et abonnement på alle) er der en "📅 Tilføj til kalender"-knap
+ved siden af "Download Excel" på hver tjekliste — bruger jeres almindelige login, kræver ikke
+CALENDAR_TOKEN, og downloader/åbner en .ics-fil med præcis det ene stævne.
 
 Abonnér på feedet fra jeres kalender-app:
 https://equipe.svejdaltech.dk/calendar/<CALENDAR_TOKEN>.ics

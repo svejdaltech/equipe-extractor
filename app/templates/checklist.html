@@ -201,6 +201,13 @@
     flex-wrap: wrap;
   }
 
+  .controls-actions {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    flex-wrap: wrap;
+  }
+
   .filter-toggle {
     display: inline-flex;
     background: var(--surface);
@@ -531,7 +538,10 @@
         <button class="filter-btn active" data-filter="all" role="tab" aria-selected="true">Alle</button>
         <button class="filter-btn" data-filter="pending" role="tab" aria-selected="false">Mangler</button>
       </div>
-      <a class="export-btn" href="/meetings/{{ meeting_id }}/export">Download Excel</a>
+      <div class="controls-actions">
+        <a class="export-btn" href="/meetings/{{ meeting_id }}/calendar.ics">📅 Tilføj til kalender</a>
+        <a class="export-btn" href="/meetings/{{ meeting_id }}/export">Download Excel</a>
+      </div>
     </div>
   </header>
 

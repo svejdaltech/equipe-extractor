@@ -127,3 +127,32 @@ def test_calendar_feed_uses_public_base_url_when_set(client):
         r = client.get("/calendar/tok.ics")
 
     assert "https://equipe.svejdaltech.dk/meetings/69835" in r.text
+
+
+def test_single_meeting_ics_requires_auth(client):
+    r = client.get("/meetings/69835/calendar.ics")
+    assert r.status_code == 401
+
+
+def test_single_meeting_ics_404s_for_unknown_meeting(client):
+    r = client.get("/meetings/999999/calendar.ics", auth=("user", "pass"))
+    assert r.status_code == 404
+
+
+def test_single_meeting_ics_contains_only_that_meeting(client):
+    # No CALENDAR_TOKEN needed at all — this is Basic Auth, not the token feed.
+    with patched_sync(rows=SAMPLE_ROWS, info=SAMPLE_MEETING_INFO):
+        client.get("/meetings/69835", auth=("user", "pass"))
+
+    other_rows = [{**SAMPLE_ROWS[0], "id": 99999999, "meeting_id": 70000}]
+    with patched_sync(rows=other_rows, info={**SAMPLE_MEETING_INFO, "display_name": "Andet stævne"}):
+        client.get("/meetings/70000", auth=("user", "pass"))
+
+    r = client.get("/meetings/69835/calendar.ics", auth=("user", "pass"))
+
+    assert r.status_code == 200
+    assert r.headers["content-type"].startswith("text/calendar")
+    assert 'attachment; filename="staevne-69835.ics"' in r.headers["content-disposition"]
+    assert "meeting-69835@equipe-extractor" in r.text
+    assert "meeting-70000@equipe-extractor" not in r.text
+    assert r.text.count("BEGIN:VEVENT") == 1
