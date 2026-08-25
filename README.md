@@ -27,11 +27,28 @@ GET  /?meeting_id=<id>                          — download stævnet som Excel
 GET  /meetings/<id>                              — rytter-tjekliste (synker fra Equipe ved hvert kald)
 POST /meetings/<id>/riders/<rider_id>/seen       — marker (eller genmarker) en rytter som "set"
 GET  /meetings/<id>/export                       — samme Excel-download som GET /, linket fra tjeklisten
+GET  /calendar/<CALENDAR_TOKEN>.ics              — kalender-feed, ét stævne per synkroniseret meeting (se #Kalender)
 
 #Auth
-Alle endpoints kræver HTTP Basic Auth. Sæt disse env vars før programmet startes (både lokalt og i docker):
+Alle almindelige endpoints kræver HTTP Basic Auth. Sæt disse env vars før programmet startes (både lokalt og i docker):
 AUTH_USERNAME
 AUTH_PASSWORD
+
+#Kalender
+Kalender-feedet (/calendar/<token>.ics) bruger IKKE Basic Auth — de fleste kalender-apps kan ikke abonnere
+på et feed bag Basic Auth. I stedet er selve tokenet hemmeligheden. Sæt env var:
+CALENDAR_TOKEN — et langt tilfældigt token, fx genereret med: openssl rand -hex 32
+Uden CALENDAR_TOKEN sat giver endpointet 404 (kalender-feedet er altså slået fra som standard).
+
+Sæt evt. også PUBLIC_BASE_URL (fx https://equipe.svejdaltech.dk) så links i kalenderen peger rigtigt —
+uden den bruges request'ens eget host, hvilket kan blive forkert bag en reverse proxy.
+
+Abonnér på feedet fra jeres kalender-app:
+https://equipe.svejdaltech.dk/calendar/<CALENDAR_TOKEN>.ics
+— Google Calendar: "Andre kalendere" → "Fra URL"
+— Apple Calendar: Arkiv → "Nyt kalenderabonnement"
+— Outlook: "Tilføj kalender" → "Abonnér fra web"
+Stævner dukker automatisk op i feedet, første gang nogen besøger /meetings/<id> (fx via bookmarkleten).
 
 #Database
 Tjeklisten (ryttere/starter/"set"-status) gemmes i en SQLite-fil. Sti sættes via env var DATABASE_URL,

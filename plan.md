@@ -30,14 +30,20 @@ UI design was confirmed via an interactive mockup before building (see memory `p
 - [x] Fixed a timezone round-trip bug found while building this: SQLite drops tzinfo on read-back, so `photographed_at` (always written as UTC) needs its UTC offset reattached before being sent to the client — otherwise the browser would misread it as already-local and show times off by the UTC offset. `start_at` deliberately does *not* get this treatment, since Equipe's times are already the event's own local time and the browser viewing it is physically at that event. Covered by a regression test.
 - [x] Tests: `tests/test_checklist.py` covers `sync_meeting` upserts, the checklist page rendering real rider/horse data, mark/re-mark refreshing the timestamp, unknown-rider 404, the `/export` route, and the timezone regression above. 19/19 tests pass across the whole suite.
 
-## P3 — iCal integration (from `nice to have.md`)
+## P3 — iCal integration — done
 
 Goal (as noted): when a new event/meeting shows up, a calendar entry should appear for it, linking to the prepared page for that event (the P2 web view above).
 
-**Open questions before this can be scoped/built** — flagging rather than guessing:
-- How do we learn about a "new event" in the first place? Is there an Equipe endpoint that lists all upcoming meetings we could poll, or is a meeting only known once someone manually enters its `meeting_id` today?
-- Who/what "prepares" an event before the calendar entry should fire — is that just "the meeting now exists in our DB" (i.e. automatic once P2's sync has run for it), or a manual step?
-- Static `.ics` file, or a live iCal *subscription URL* that calendar apps (Google/Outlook/Apple Calendar) poll periodically? A subscription feed is more useful (updates automatically) but needs a stable, presumably auth-free or token-based URL, since most calendar apps can't do HTTP Basic Auth on a subscribed feed — worth deciding before P1's auth choice becomes a blocker here.
+Resolved the three open questions before building:
+- **Discovery**: there's no Equipe "list all meetings" endpoint, so a meeting only becomes known once someone visits it — this now dovetails with the bookmarklet workflow (browse Equipe → click bookmarklet → `/meetings/{id}` syncs it → shows up in the calendar feed on next refresh). No separate "prepare" step.
+- **Trigger**: fully automatic — any meeting in the `meetings` table appears in the feed, no manual "add to calendar" action.
+- **Auth model**: a live subscription URL secured by a secret token in the path (`/calendar/{token}.ics`), not Basic Auth — confirmed with the user that a public repo doesn't leak the token (it's a runtime secret/env var, never committed, same model as `AUTH_USERNAME`/`AUTH_PASSWORD`). Also confirmed the "connect Gmail/CalDAV and just click add" wish doesn't need real OAuth/CalDAV integration — Google/Outlook/Apple Calendar's built-in "add calendar from URL" already covers it with far less complexity.
+
+- [x] **`app/calendar_feed.py`**: `build_ics(meetings, base_url)` — hand-rolled RFC 5545 builder (no new dependency), one all-day `VEVENT` per meeting with a stable `UID` (so refreshes update rather than duplicate), proper text escaping and 75-octet line folding, `DTEND` computed as the exclusive end date. Verified against the live container with the `icalendar` library that the output round-trips cleanly.
+- [x] Added `Meeting.end_on` (was fetched by `parser.get_meeting_info` already but never stored) so multi-day meetings render as a proper date range instead of collapsing to one day.
+- [x] **`GET /calendar/{token}.ics`** in `app/main.py` — deliberately *not* behind `require_auth`; instead compares the path token via `secrets.compare_digest` against `CALENDAR_TOKEN` (env var, optional — endpoint 404s if unset, so this is opt-in and doesn't affect existing deployments/tests). Links inside the feed use `PUBLIC_BASE_URL` if set, else fall back to the incoming request's own host (best-effort behind a reverse proxy that doesn't forward scheme headers).
+- [x] Documented in `README.md`: generating a token (`openssl rand -hex 32`), the `PUBLIC_BASE_URL` env var, and how to subscribe from Google/Outlook/Apple Calendar.
+- [x] Tests: `tests/test_calendar_feed.py` covers `build_ics` (basic event, multi-day exclusive end date, escaping, line folding, skipping meetings with no date) and the route (404 when unconfigured, 404 on wrong token, 200 with correct content and links). 33/33 tests pass across the whole suite.
 
 ## P4 — Nice to haves
 

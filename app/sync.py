@@ -38,6 +38,7 @@ def sync_meeting(db: Session, meeting_id: str) -> None:
         db.add(meeting)
     meeting.display_name = info["display_name"]
     meeting.start_on = info["start_on"]
+    meeting.end_on = info["end_on"]
     meeting.synced_at = datetime.now(timezone.utc)
 
     # De-duplicate by primary key before touching the DB: a rider commonly appears

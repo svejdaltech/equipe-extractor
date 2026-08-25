@@ -4,13 +4,14 @@ import secrets
 from datetime import datetime, timezone
 
 from fastapi import BackgroundTasks, Depends, FastAPI, HTTPException, Query, Request, status
-from fastapi.responses import FileResponse, HTMLResponse
+from fastapi.responses import FileResponse, HTMLResponse, Response
 from fastapi.security import HTTPBasic, HTTPBasicCredentials
 from fastapi.templating import Jinja2Templates
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app import models
+from app.calendar_feed import build_ics
 from app.checklist import get_checklist_data
 from app.database import Base, engine, get_db
 from app.parser import UpstreamError, generate_excel, parse_schedule
@@ -28,6 +29,12 @@ try:
     AUTH_PASSWORD = os.environ["AUTH_PASSWORD"]
 except KeyError as e:
     raise RuntimeError(f"Missing required environment variable: {e.args[0]}") from e
+
+# Both optional: the calendar feed is disabled (404s) until CALENDAR_TOKEN is set.
+# PUBLIC_BASE_URL overrides the request's own host for links inside the feed —
+# useful if the app can't reliably see its own public scheme/host behind a proxy.
+CALENDAR_TOKEN = os.environ.get("CALENDAR_TOKEN")
+PUBLIC_BASE_URL = os.environ.get("PUBLIC_BASE_URL", "").rstrip("/")
 
 DANISH_MONTHS = [
     "januar", "februar", "marts", "april", "maj", "juni",
@@ -170,3 +177,20 @@ def mark_rider_seen(
     db.commit()
 
     return {"rider_id": rider_id, "photographed_at": now.isoformat()}
+
+
+@app.get("/calendar/{token}.ics")
+def calendar_feed(token: str, request: Request, db: Session = Depends(get_db)):
+    """
+    Token-protected iCal feed (no Basic Auth — calendar apps generally can't do
+    it) with one all-day event per synced meeting, linking back to its checklist.
+    Subscribe to this URL directly from Google/Outlook/Apple Calendar.
+    """
+    if not CALENDAR_TOKEN or not secrets.compare_digest(token, CALENDAR_TOKEN):
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND)
+
+    meetings = db.execute(select(models.Meeting)).scalars().all()
+    base_url = PUBLIC_BASE_URL or str(request.base_url).rstrip("/")
+    ics_body = build_ics(meetings, base_url)
+
+    return Response(content=ics_body, media_type="text/calendar; charset=utf-8")

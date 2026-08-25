@@ -9,6 +9,7 @@ class Meeting(Base):
     id = Column(Integer, primary_key=True)  # Equipe meeting_id
     display_name = Column(String, nullable=True)
     start_on = Column(String, nullable=True)
+    end_on = Column(String, nullable=True)
     synced_at = Column(DateTime, nullable=True)
 
 
