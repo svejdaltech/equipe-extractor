@@ -37,10 +37,14 @@ AUTH_USERNAME
 AUTH_PASSWORD
 
 #Bogmærke
-Forsiden (/ uden meeting_id) viser altid "Stævne-genvej" — bogmærket der springer fra et stævne på
-online.equipe.com direkte til rytter-tjeklisten her. Selvhostet, så det altid kan hentes igen, hvis
-det mistes fra browserens bogmærkelinje. Bruger samme PUBLIC_BASE_URL som kalender-feedet (se
-#Kalender) til at vide hvilket domæne bogmærket skal pege på.
+Forsiden (/ uden meeting_id) viser altid "Stævne-genvej", på to måder:
+1. Et indsæt-link-felt — kopiér et Equipe-link (eller bare stævne-ID'et) og indsæt det, virker på alle
+   enheder/browsere, inkl. mobil.
+2. Et javascript-bogmærke der springer direkte fra et stævne på online.equipe.com — hurtigst på
+   computer, men mange mobilbrowsere (særligt Chrome på Android) blokerer javascript-bogmærker, brug
+   indsæt-link-feltet der i stedet.
+Selvhostet, så det altid kan hentes igen, hvis bogmærket mistes. Bruger samme PUBLIC_BASE_URL som
+kalender-feedet (se #Kalender) til at vide hvilket domæne det skal pege på.
 
 #Kalender
 Kalender-feedet (/calendar/<token>.ics) bruger IKKE Basic Auth — de fleste kalender-apps kan ikke abonnere

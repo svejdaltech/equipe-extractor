@@ -32,6 +32,16 @@ def test_home_shows_bookmarklet_page_without_meeting_id(client):
     assert "javascript:(function()" in r.text
 
 
+def test_home_shows_paste_link_fallback(client):
+    # Mobile browsers (esp. Chrome/Android) often block javascript: bookmarklets —
+    # this is the device-independent alternative.
+    r = client.get("/", auth=("user", "pass"))
+    assert r.status_code == 200
+    assert 'id="equipe-link-input"' in r.text
+    assert 'id="paste-btn"' in r.text
+    assert "goToChecklist" in r.text
+
+
 def test_home_bookmarklet_uses_public_base_url_when_set(client):
     with patch("app.main.PUBLIC_BASE_URL", "https://equipe.svejdaltech.dk"):
         r = client.get("/", auth=("user", "pass"))

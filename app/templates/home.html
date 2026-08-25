@@ -118,6 +118,72 @@
 
   p strong { color: var(--ink); font-weight: 600; }
 
+  .paste-row {
+    display: flex;
+    gap: 0.6rem;
+    margin-bottom: 0.5rem;
+  }
+
+  .paste-row input {
+    flex: 1;
+    min-width: 0;
+    font-family: "IBM Plex Mono", ui-monospace, monospace;
+    font-size: 0.88rem;
+    padding: 0.7rem 0.8rem;
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    background: var(--surface-raised);
+    color: var(--ink);
+  }
+
+  .paste-row input:focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 1px;
+  }
+
+  .paste-btn {
+    flex: none;
+    appearance: none;
+    border: 1px solid var(--accent);
+    background: var(--accent);
+    color: var(--surface-raised);
+    font-family: "Public Sans", sans-serif;
+    font-size: 0.9rem;
+    font-weight: 700;
+    padding: 0 1.1rem;
+    border-radius: 8px;
+    cursor: pointer;
+    white-space: nowrap;
+  }
+
+  .paste-btn:hover { opacity: 0.9; }
+  .paste-btn:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+  .section-label {
+    margin: 0 0 0.6rem;
+    font-size: 0.82rem;
+    font-weight: 600;
+    color: var(--ink);
+  }
+
+  .divider {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    margin: 2rem 0 1.4rem;
+    color: var(--ink-faint);
+    font-size: 0.78rem;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+  }
+
+  .divider::before, .divider::after {
+    content: "";
+    flex: 1;
+    height: 1px;
+    background: var(--line);
+  }
+
   .bookmarklet-wrap {
     display: flex;
     justify-content: center;
@@ -237,8 +303,18 @@
     <a class="settings-link" href="/settings">Indstillinger</a>
   </div>
   <h1>Stævne-genvej</h1>
-  <p>Et bogmærke der springer dig direkte fra et stævne på <strong>online.equipe.com</strong> over til rytter-tjeklisten for det samme stævne her — uden at skulle taste stævne-ID'et manuelt. Denne side ligger altid her, så I kan hente bogmærket igen, hvis I mister det.</p>
+  <p>Kom direkte fra et stævne på <strong>online.equipe.com</strong> til rytter-tjeklisten for det samme stævne her — uden at skulle taste stævne-ID'et manuelt. Denne side ligger altid her, så I altid kan finde vej, uanset enhed.</p>
 
+  <p class="section-label">Indsæt link (virker overalt, også på telefon)</p>
+  <div class="paste-row">
+    <input type="text" inputmode="url" id="equipe-link-input" placeholder="https://online.equipe.com/shows/69835" autocomplete="off" autocapitalize="off" spellcheck="false">
+    <button class="paste-btn" id="paste-btn">Gå til tjekliste</button>
+  </div>
+  <p class="patterns">Kopiér stævnets link fra Equipe (fx via "Del"/"Kopiér link" på telefonen) og indsæt det her — eller bare selve tal-ID'et.</p>
+
+  <div class="divider">eller brug et bogmærke</div>
+
+  <p class="section-label">Bogmærke (hurtigst på computer)</p>
   <div class="bookmarklet-wrap">
     <a class="bookmarklet" href="javascript:(function(){var m=location.href.match(/\/(?:shows|meetings)\/(\d+)/);if(m){window.open('{{ base_url }}/meetings/'+m[1],'_blank');}else{alert('Kunne ikke finde et stævne-ID i denne side.');}})();">🔖 Stævne-genvej</a>
   </div>
@@ -256,7 +332,31 @@
     <p class="patterns">Opret et nyt bogmærke i din browser, og sæt koden ovenfor som URL i stedet for en almindelig adresse.</p>
   </details>
 
-  <p class="patterns" style="margin-top: 1.2rem;">Virker på URL'er der indeholder <code>/shows/&lt;tal&gt;</code> eller <code>/meetings/&lt;tal&gt;</code> — dvs. både stævnesiden og API-endpoints på online.equipe.com.</p>
+  <p class="patterns" style="margin-top: 1.2rem;">Begge dele virker på links der indeholder <code>/shows/&lt;tal&gt;</code> eller <code>/meetings/&lt;tal&gt;</code> — dvs. både stævnesiden og API-endpoints på online.equipe.com. Mobilbrowsere (særligt Chrome på Android) understøtter ofte ikke bogmærker med kode i — brug feltet ovenfor i stedet.</p>
 </div>
+
+<script>
+  var linkInput = document.getElementById("equipe-link-input");
+  var pasteBtn = document.getElementById("paste-btn");
+
+  function goToChecklist() {
+    var raw = linkInput.value.trim();
+    if (!raw) return;
+
+    var match = raw.match(/\/(?:shows|meetings)\/(\d+)/);
+    var meetingId = match ? match[1] : (/^\d+$/.test(raw) ? raw : null);
+
+    if (meetingId) {
+      window.location.href = "{{ base_url }}/meetings/" + meetingId;
+    } else {
+      alert("Kunne ikke finde et stævne-ID i det link.");
+    }
+  }
+
+  pasteBtn.addEventListener("click", goToChecklist);
+  linkInput.addEventListener("keydown", function (e) {
+    if (e.key === "Enter") goToChecklist();
+  });
+</script>
 </body>
 </html>
