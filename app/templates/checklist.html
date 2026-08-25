@@ -78,7 +78,7 @@
   }
 
   .page {
-    max-width: 46rem;
+    max-width: 64rem;
     margin: 0 auto;
     padding: 1.25rem 1.1rem 4rem;
   }
@@ -311,7 +311,7 @@
   .row {
     display: grid;
     grid-template-areas: "time class rider club status";
-    grid-template-columns: 4.6rem 9.5rem 1fr 8rem 12rem;
+    grid-template-columns: 4.6rem 10rem 1fr 12rem 12rem;
     align-items: center;
     gap: 0.9rem;
     padding: 0.75rem 0.25rem;
@@ -372,6 +372,8 @@
   }
 
   .club-name {
+    display: block;
+    max-width: 100%;
     font-size: 0.82rem;
     color: var(--ink-muted);
     overflow: hidden;
