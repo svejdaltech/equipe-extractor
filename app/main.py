@@ -95,16 +95,23 @@ def _export_excel(meeting_id: str, background_tasks: BackgroundTasks, db: Sessio
 
 
 @app.get("/")
-def export_to_excel(
+def home(
+    request: Request,
     background_tasks: BackgroundTasks,
-    meeting_id: str = Query(..., description="Equipe API endpoint"),
+    meeting_id: str | None = Query(None, description="Equipe API endpoint — omit to see the bookmarklet page"),
     db: Session = Depends(get_db),
     _auth: None = Depends(require_auth),
 ):
     """
-    Export the schedule for a meeting ID to Excel.
+    With ?meeting_id=<id>: export that meeting's schedule to Excel (unchanged
+    behaviour). Without it: show the "Stævne-genvej" bookmarklet page, so it's
+    always recoverable on-site if lost from the browser.
     """
-    return _export_excel(meeting_id, background_tasks, db)
+    if meeting_id:
+        return _export_excel(meeting_id, background_tasks, db)
+
+    base_url = PUBLIC_BASE_URL or str(request.base_url).rstrip("/")
+    return templates.TemplateResponse(request, "home.html", {"base_url": base_url})
 
 
 @app.get("/meetings/{meeting_id}/export")

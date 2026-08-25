@@ -23,6 +23,7 @@ https://online.equipe.com/api/v1/meetings/69835/horses
 https://online.equipe.com/api/v1/meetings/69835/riders
 
 #Endpoints
+GET  /                                           — Stævne-genvej: bogmærke-siden (se #Bogmærke), hvis meeting_id udelades
 GET  /?meeting_id=<id>                          — download stævnet som Excel
 GET  /meetings/<id>                              — rytter-tjekliste (synker fra Equipe ved hvert kald)
 POST /meetings/<id>/riders/<rider_id>/seen       — marker (eller genmarker) en rytter som "set"
@@ -34,6 +35,12 @@ GET  /settings                                   — indstillinger (pt. Excel-ko
 Alle almindelige endpoints kræver HTTP Basic Auth. Sæt disse env vars før programmet startes (både lokalt og i docker):
 AUTH_USERNAME
 AUTH_PASSWORD
+
+#Bogmærke
+Forsiden (/ uden meeting_id) viser altid "Stævne-genvej" — bogmærket der springer fra et stævne på
+online.equipe.com direkte til rytter-tjeklisten her. Selvhostet, så det altid kan hentes igen, hvis
+det mistes fra browserens bogmærkelinje. Bruger samme PUBLIC_BASE_URL som kalender-feedet (se
+#Kalender) til at vide hvilket domæne bogmærket skal pege på.
 
 #Kalender
 Kalender-feedet (/calendar/<token>.ics) bruger IKKE Basic Auth — de fleste kalender-apps kan ikke abonnere

@@ -1,0 +1,262 @@
+<!doctype html>
+<html lang="da">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Stævne-genvej — Equipe Extractor</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400..600&family=Public+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #EAE6DA;
+    --surface: #F6F3EA;
+    --surface-raised: #FFFFFF;
+    --ink: #232620;
+    --ink-muted: #6B6A5C;
+    --ink-faint: #94927E;
+    --line: #D9D2BE;
+    --accent: #7B2D3A;
+    --accent-soft: #F1DEDF;
+    --shadow: 0 1px 2px rgba(35,38,32,0.06);
+    color-scheme: light;
+  }
+
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #16150F;
+      --surface: #201F17;
+      --surface-raised: #262418;
+      --ink: #F0EBDD;
+      --ink-muted: #ACA792;
+      --ink-faint: #726E5C;
+      --line: #38361F;
+      --accent: #E08A94;
+      --accent-soft: #3A2229;
+      --shadow: 0 1px 3px rgba(0,0,0,0.4);
+      color-scheme: dark;
+    }
+  }
+
+  :root[data-theme="dark"] {
+    --bg: #16150F;
+    --surface: #201F17;
+    --surface-raised: #262418;
+    --ink: #F0EBDD;
+    --ink-muted: #ACA792;
+    --ink-faint: #726E5C;
+    --line: #38361F;
+    --accent: #E08A94;
+    --accent-soft: #3A2229;
+    --shadow: 0 1px 3px rgba(0,0,0,0.4);
+    color-scheme: dark;
+  }
+
+  * { box-sizing: border-box; }
+
+  body {
+    margin: 0;
+    min-height: 100vh;
+    background: var(--bg);
+    color: var(--ink);
+    font-family: "Public Sans", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    -webkit-font-smoothing: antialiased;
+    display: flex;
+    justify-content: center;
+    padding: 2.5rem 1.25rem;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    * { animation-duration: 0.001ms !important; transition-duration: 0.001ms !important; }
+  }
+
+  .card { max-width: 34rem; width: 100%; }
+
+  .eyebrow-row {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 0.75rem;
+    margin-bottom: 0.5rem;
+  }
+
+  .eyebrow {
+    margin: 0;
+    font-family: "IBM Plex Mono", ui-monospace, monospace;
+    font-size: 0.72rem;
+    letter-spacing: 0.09em;
+    text-transform: uppercase;
+    color: var(--ink-muted);
+  }
+
+  .settings-link {
+    font-size: 0.72rem;
+    color: var(--ink-faint);
+    text-decoration: underline;
+    white-space: nowrap;
+  }
+
+  .settings-link:hover { color: var(--ink-muted); }
+
+  h1 {
+    margin: 0 0 0.9rem;
+    font-family: "Fraunces", Georgia, serif;
+    font-weight: 560;
+    font-size: clamp(1.7rem, 6vw, 2.2rem);
+    line-height: 1.12;
+    letter-spacing: -0.01em;
+    text-wrap: balance;
+  }
+
+  p {
+    margin: 0 0 1.4rem;
+    font-size: 0.98rem;
+    line-height: 1.6;
+    color: var(--ink-muted);
+    max-width: 34rem;
+  }
+
+  p strong { color: var(--ink); font-weight: 600; }
+
+  .bookmarklet-wrap {
+    display: flex;
+    justify-content: center;
+    padding: 1.6rem 1rem;
+    margin-bottom: 1.6rem;
+    background: var(--surface);
+    border: 1px dashed var(--line);
+    border-radius: 10px;
+  }
+
+  .bookmarklet {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    appearance: none;
+    border: 1px solid var(--accent);
+    background: var(--surface-raised);
+    color: var(--accent);
+    font-family: "Public Sans", sans-serif;
+    font-size: 0.95rem;
+    font-weight: 700;
+    padding: 0.75rem 1.3rem;
+    border-radius: 8px;
+    text-decoration: none;
+    cursor: grab;
+    box-shadow: var(--shadow);
+    user-select: none;
+    -webkit-user-select: none;
+  }
+
+  .bookmarklet:hover { background: var(--accent-soft); }
+  .bookmarklet:active { cursor: grabbing; }
+  .bookmarklet:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
+
+  .steps {
+    margin: 0 0 1.8rem;
+    padding: 0;
+    list-style: none;
+    counter-reset: step;
+  }
+
+  .steps li {
+    counter-increment: step;
+    display: flex;
+    gap: 0.75rem;
+    padding: 0.6rem 0;
+    border-bottom: 1px solid var(--line);
+    font-size: 0.92rem;
+    line-height: 1.5;
+  }
+
+  .steps li:last-child { border-bottom: none; }
+
+  .steps li::before {
+    content: counter(step);
+    flex: none;
+    width: 1.5rem;
+    height: 1.5rem;
+    border-radius: 50%;
+    background: var(--accent-soft);
+    color: var(--accent);
+    font-family: "IBM Plex Mono", ui-monospace, monospace;
+    font-size: 0.78rem;
+    font-weight: 500;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  details {
+    border-top: 1px solid var(--line);
+    padding-top: 1rem;
+  }
+
+  summary {
+    cursor: pointer;
+    font-size: 0.85rem;
+    color: var(--ink-muted);
+    font-weight: 600;
+  }
+
+  summary:hover { color: var(--ink); }
+
+  .code-box {
+    margin-top: 0.75rem;
+    padding: 0.9rem;
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    font-family: "IBM Plex Mono", ui-monospace, monospace;
+    font-size: 0.76rem;
+    line-height: 1.6;
+    color: var(--ink-muted);
+    overflow-x: auto;
+    white-space: pre-wrap;
+    word-break: break-all;
+  }
+
+  .patterns {
+    margin-top: 0.6rem;
+    font-size: 0.82rem;
+    color: var(--ink-faint);
+  }
+
+  .patterns code {
+    font-family: "IBM Plex Mono", ui-monospace, monospace;
+    background: var(--surface);
+    padding: 0.1rem 0.35rem;
+    border-radius: 4px;
+  }
+</style>
+</head>
+<body>
+<div class="card">
+  <div class="eyebrow-row">
+    <p class="eyebrow">Equipe Extractor</p>
+    <a class="settings-link" href="/settings">Indstillinger</a>
+  </div>
+  <h1>Stævne-genvej</h1>
+  <p>Et bogmærke der springer dig direkte fra et stævne på <strong>online.equipe.com</strong> over til rytter-tjeklisten for det samme stævne her — uden at skulle taste stævne-ID'et manuelt. Denne side ligger altid her, så I kan hente bogmærket igen, hvis I mister det.</p>
+
+  <div class="bookmarklet-wrap">
+    <a class="bookmarklet" href="javascript:(function(){var m=location.href.match(/\/(?:shows|meetings)\/(\d+)/);if(m){window.open('{{ base_url }}/meetings/'+m[1],'_blank');}else{alert('Kunne ikke finde et stævne-ID i denne side.');}})();">🔖 Stævne-genvej</a>
+  </div>
+
+  <ol class="steps">
+    <li>Sørg for at din bogmærkelinje er synlig (Ctrl/Cmd+Shift+B i de fleste browsere).</li>
+    <li>Træk knappen ovenfor op i bogmærkelinjen.</li>
+    <li>Gå ind på et stævne på online.equipe.com (en side med <code>/shows/&lt;id&gt;</code> i adressen).</li>
+    <li>Klik bogmærket — jeres tjekliste for stævnet åbner i en ny fane.</li>
+  </ol>
+
+  <details>
+    <summary>Kan ikke trække — indsæt manuelt i stedet</summary>
+    <div class="code-box">javascript:(function(){var m=location.href.match(/\/(?:shows|meetings)\/(\d+)/);if(m){window.open('{{ base_url }}/meetings/'+m[1],'_blank');}else{alert('Kunne ikke finde et stævne-ID i denne side.');}})();</div>
+    <p class="patterns">Opret et nyt bogmærke i din browser, og sæt koden ovenfor som URL i stedet for en almindelig adresse.</p>
+  </details>
+
+  <p class="patterns" style="margin-top: 1.2rem;">Virker på URL'er der indeholder <code>/shows/&lt;tal&gt;</code> eller <code>/meetings/&lt;tal&gt;</code> — dvs. både stævnesiden og API-endpoints på online.equipe.com.</p>
+</div>
+</body>
+</html>

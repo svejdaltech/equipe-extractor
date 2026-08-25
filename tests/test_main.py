@@ -19,6 +19,40 @@ def test_export_requires_auth(client):
     assert r.headers["www-authenticate"] == "Basic"
 
 
+def test_home_requires_auth(client):
+    r = client.get("/")
+    assert r.status_code == 401
+
+
+def test_home_shows_bookmarklet_page_without_meeting_id(client):
+    r = client.get("/", auth=("user", "pass"))
+    assert r.status_code == 200
+    assert "text/html" in r.headers["content-type"]
+    assert "Stævne-genvej" in r.text
+    assert "javascript:(function()" in r.text
+
+
+def test_home_bookmarklet_uses_public_base_url_when_set(client):
+    with patch("app.main.PUBLIC_BASE_URL", "https://equipe.svejdaltech.dk"):
+        r = client.get("/", auth=("user", "pass"))
+    assert "https://equipe.svejdaltech.dk/meetings/" in r.text
+
+
+def test_home_still_exports_when_meeting_id_given(client):
+    with patch("app.main.parse_schedule", return_value=[{"a": 1}]), \
+         patch("app.main.generate_excel", return_value=None) as mock_generate:
+        import tempfile
+        fd, path = tempfile.mkstemp(suffix=".xlsx")
+        import os
+        os.close(fd)
+        mock_generate.return_value = path
+
+        r = client.get("/?meeting_id=1", auth=("user", "pass"))
+
+    assert r.status_code == 200
+    assert "spreadsheetml" in r.headers["content-type"]
+
+
 def test_api_docs_are_disabled(client):
     assert client.get("/docs").status_code == 404
     assert client.get("/redoc").status_code == 404
