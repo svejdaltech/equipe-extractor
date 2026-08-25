@@ -1,7 +1,7 @@
 import os
 import secrets
 
-from fastapi import Depends, FastAPI, HTTPException, Query, status
+from fastapi import BackgroundTasks, Depends, FastAPI, HTTPException, Query, status
 from fastapi.responses import FileResponse
 from fastapi.security import HTTPBasic, HTTPBasicCredentials
 from app.parser import parse_schedule, generate_excel
@@ -31,6 +31,7 @@ def require_auth(credentials: HTTPBasicCredentials = Depends(security)):
 
 @app.get("/")
 def export_to_excel(
+    background_tasks: BackgroundTasks,
     meeting_id: str = Query(..., description="Equipe API endpoint"),
     _auth: None = Depends(require_auth),
 ):
@@ -39,6 +40,7 @@ def export_to_excel(
     """
     starts = parse_schedule(meeting_id)
     file_path = generate_excel(starts)
+    background_tasks.add_task(os.remove, file_path)
     return FileResponse(
         file_path,
         media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",

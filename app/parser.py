@@ -1,4 +1,8 @@
+import logging
+
 import requests
+
+logger = logging.getLogger(__name__)
 
 REQUEST_TIMEOUT = 10  # seconds
 
@@ -12,15 +16,13 @@ def get_json(url):
     response = requests.get(url, timeout=REQUEST_TIMEOUT)
 
     if response.status_code != 200:
-        print(f"[ERROR] Request to {url} failed with status {response.status_code}")
-        print(f"Raw response: {response.text}")
+        logger.error("Request to %s failed with status %s: %s", url, response.status_code, response.text)
         raise ValueError(f"Request to {url} failed with status {response.status_code}")
 
     try:
         return response.json()
     except ValueError as e:
-        print(f"[ERROR] Failed to parse JSON from {url}")
-        print(f"Raw response: {response.text}")
+        logger.error("Failed to parse JSON from %s: %s", url, response.text)
         raise e
 
 
@@ -29,9 +31,6 @@ def parse_schedule(meeting_id):
 
     meeting_url = f"https://online.equipe.com/api/v1/meetings/{meeting_id}/schedule"
     schedule = get_json(meeting_url)
-
-    # print("Schedule received:", schedule)
-    # print("Type of schedule:", type(schedule))
 
     # Hvis det er en string ved en fejl (fx JSON i string-format), så prøv at parse det
     if isinstance(schedule, str):
@@ -63,7 +62,6 @@ def parse_schedule(meeting_id):
 
             if section_details and section_details.get("starts"):
                 for start in section_details["starts"]:
-                    #print(f"Competitions: {start}")
                     enriched_row = {
                         **comp_info,
                         "class_section_id": class_section_id,
@@ -73,10 +71,6 @@ def parse_schedule(meeting_id):
                         **start # <-- her får vi alt rider/hest/points/etc. med
                     }
                     competitions.append(enriched_row)  # tilføj kopi for hver section med resultater
-                
-
-    #print(f"Competitions: {competitions}")
-   #print(f"Type: {type(competitions)}")
 
     return competitions
 
@@ -105,12 +99,10 @@ def generate_excel(data: list[dict]) -> str:
 
 
     if not data:
-        print("❌ Data is empty!")
+        logger.warning("generate_excel called with no data")
 
     # Convert list of dicts into a DataFrame
     df = pd.DataFrame(data)
-    # print("🔍 DataFrame preview:")
-    # print(df.head())
 
     # Rearrange columns: preferred ones first, then the rest
     preferred = [col for col in preferred_columns if col in df.columns]
