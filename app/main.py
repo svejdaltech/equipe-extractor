@@ -4,7 +4,7 @@ import secrets
 from fastapi import BackgroundTasks, Depends, FastAPI, HTTPException, Query, status
 from fastapi.responses import FileResponse
 from fastapi.security import HTTPBasic, HTTPBasicCredentials
-from app.parser import parse_schedule, generate_excel
+from app.parser import parse_schedule, generate_excel, UpstreamError
 
 app = FastAPI()
 
@@ -38,8 +38,14 @@ def export_to_excel(
     """
     Export the schedule for a meeting ID to Excel.
     """
-    starts = parse_schedule(meeting_id)
-    file_path = generate_excel(starts)
+    try:
+        starts = parse_schedule(meeting_id)
+        file_path = generate_excel(starts)
+    except ValueError as e:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
+    except UpstreamError as e:
+        raise HTTPException(status_code=status.HTTP_502_BAD_GATEWAY, detail=str(e))
+
     background_tasks.add_task(os.remove, file_path)
     return FileResponse(
         file_path,

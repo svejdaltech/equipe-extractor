@@ -7,23 +7,31 @@ logger = logging.getLogger(__name__)
 REQUEST_TIMEOUT = 10  # seconds
 
 
+class UpstreamError(Exception):
+    """Raised when the Equipe API can't be reached or returns something unusable."""
+
+
 def _validate_id(value, name):
     if value is None or not str(value).isdigit():
         raise ValueError(f"Invalid {name}: {value!r} (expected a numeric ID)")
 
 
 def get_json(url):
-    response = requests.get(url, timeout=REQUEST_TIMEOUT)
+    try:
+        response = requests.get(url, timeout=REQUEST_TIMEOUT)
+    except requests.RequestException as e:
+        logger.error("Request to %s failed: %s", url, e)
+        raise UpstreamError(f"Could not reach {url}: {e}") from e
 
     if response.status_code != 200:
         logger.error("Request to %s failed with status %s: %s", url, response.status_code, response.text)
-        raise ValueError(f"Request to {url} failed with status {response.status_code}")
+        raise UpstreamError(f"Request to {url} failed with status {response.status_code}")
 
     try:
         return response.json()
     except ValueError as e:
         logger.error("Failed to parse JSON from %s: %s", url, response.text)
-        raise e
+        raise UpstreamError(f"Invalid JSON from {url}") from e
 
 
 def parse_schedule(meeting_id):
@@ -38,11 +46,11 @@ def parse_schedule(meeting_id):
         try:
             schedule = json.loads(schedule)
         except json.JSONDecodeError:
-            raise ValueError("Ugyldig JSON returneret fra get_meeting_schedule")
+            raise UpstreamError("Ugyldig JSON returneret fra get_meeting_schedule")
 
     competitions_data = schedule.get("meeting_classes")
     if not isinstance(competitions_data, list):
-        raise ValueError(f"Uventet format: 'meeting_classes' mangler eller er ikke en liste: {schedule}")
+        raise UpstreamError(f"Uventet format: 'meeting_classes' mangler eller er ikke en liste: {schedule}")
 
     competitions = []
 
@@ -77,8 +85,10 @@ def parse_schedule(meeting_id):
 
 def generate_excel(data: list[dict]) -> str:
 
-    import pandas as pd
+    import os
     import uuid
+
+    import pandas as pd
 
     preferred_columns = [
     "competition_name",
@@ -119,6 +129,11 @@ def generate_excel(data: list[dict]) -> str:
     filename = f"/tmp/equipe_{uuid.uuid4()}.xlsx"
 
     # Export to Excel
-    df.to_excel(filename, index=False)
+    try:
+        df.to_excel(filename, index=False)
+    except Exception:
+        if os.path.exists(filename):
+            os.remove(filename)
+        raise
 
     return filename

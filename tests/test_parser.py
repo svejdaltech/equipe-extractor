@@ -41,8 +41,22 @@ def test_get_json_raises_on_non_200():
     resp.status_code = 404
     resp.text = "not found"
     with patch("app.parser.requests.get", return_value=resp):
-        with pytest.raises(ValueError):
+        with pytest.raises(parser.UpstreamError):
             parser.get_json("https://example.com")
+
+
+def test_get_json_wraps_network_errors():
+    import requests
+
+    with patch("app.parser.requests.get", side_effect=requests.ConnectionError("boom")):
+        with pytest.raises(parser.UpstreamError):
+            parser.get_json("https://example.com")
+
+
+def test_parse_schedule_raises_upstream_error_on_bad_shape():
+    with patch("app.parser.requests.get", side_effect=_fake_get({"no_meeting_classes": True}, {})):
+        with pytest.raises(parser.UpstreamError):
+            parser.parse_schedule("69835")
 
 
 def test_generate_excel_puts_preferred_columns_first():
@@ -55,3 +69,20 @@ def test_generate_excel_puts_preferred_columns_first():
         assert list(df.columns) == ["competition_name", "rider_name", "extra_field"]
     finally:
         os.remove(file_path)
+
+
+def test_generate_excel_cleans_up_partial_file_on_write_failure():
+    data = [{"rider_name": "A"}]
+
+    written_path = {}
+
+    def fake_to_excel(self, filename, index=False):
+        written_path["path"] = filename
+        Path(filename).write_bytes(b"partial")
+        raise OSError("disk full")
+
+    with patch("pandas.DataFrame.to_excel", fake_to_excel):
+        with pytest.raises(OSError):
+            parser.generate_excel(data)
+
+    assert not os.path.exists(written_path["path"])

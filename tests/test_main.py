@@ -33,3 +33,21 @@ def test_export_succeeds_and_cleans_up_temp_file(client, tmp_path):
 
     assert r.status_code == 200
     assert not fake_file.exists()
+
+
+def test_export_returns_400_on_invalid_meeting_id(client):
+    with patch("app.main.parse_schedule", side_effect=ValueError("Invalid meeting_id")):
+        r = client.get("/?meeting_id=not-a-number", auth=("user", "pass"))
+
+    assert r.status_code == 400
+    assert "Invalid meeting_id" in r.json()["detail"]
+
+
+def test_export_returns_502_on_upstream_error(client):
+    from app.parser import UpstreamError
+
+    with patch("app.main.parse_schedule", side_effect=UpstreamError("Equipe is down")):
+        r = client.get("/?meeting_id=1", auth=("user", "pass"))
+
+    assert r.status_code == 502
+    assert "Equipe is down" in r.json()["detail"]
