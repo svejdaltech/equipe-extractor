@@ -2,6 +2,11 @@ from datetime import date, datetime, timedelta, timezone
 
 
 def _escape_text(value: str) -> str:
+    # Normalize all newline styles to \n *before* escaping, so a bare \r (e.g. from
+    # upstream Equipe data) can't survive as a raw, unescaped carriage return inside
+    # a folded content line — lines are joined with \r\n, so a stray CR could be
+    # misread as an extra line break by a subscribing calendar app.
+    value = value.replace("\r\n", "\n").replace("\r", "\n")
     return (
         value.replace("\\", "\\\\")
         .replace(";", "\\;")

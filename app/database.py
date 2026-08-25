@@ -16,3 +16,19 @@ def get_db():
         yield db
     finally:
         db.close()
+
+
+def ensure_column(table: str, column: str, ddl_type: str) -> None:
+    """Add a column to an already-existing table if it's missing.
+
+    Base.metadata.create_all() only creates tables that don't exist yet — it never
+    ALTERs an existing one, so a schema change like adding a column needs this to
+    not crash every already-deployed database on first write. No real migration
+    tool (e.g. Alembic) for a single SQLite file feels like overkill here; this
+    covers the actual need.
+    """
+    with engine.connect() as conn:
+        existing = {row[1] for row in conn.exec_driver_sql(f"PRAGMA table_info({table})")}
+        if column not in existing:
+            conn.exec_driver_sql(f"ALTER TABLE {table} ADD COLUMN {column} {ddl_type}")
+            conn.commit()

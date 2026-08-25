@@ -13,7 +13,7 @@ from sqlalchemy.orm import Session
 from app import models
 from app.calendar_feed import build_ics
 from app.checklist import get_checklist_data
-from app.database import Base, engine, get_db
+from app.database import Base, engine, ensure_column, get_db
 from app.parser import UpstreamError, generate_excel, parse_schedule
 from app.sync import sync_meeting
 
@@ -21,6 +21,7 @@ app = FastAPI()
 templates = Jinja2Templates(directory="app/templates")
 
 Base.metadata.create_all(bind=engine)
+ensure_column("meetings", "end_on", "VARCHAR")
 
 security = HTTPBasic()
 
@@ -186,7 +187,10 @@ def calendar_feed(token: str, request: Request, db: Session = Depends(get_db)):
     it) with one all-day event per synced meeting, linking back to its checklist.
     Subscribe to this URL directly from Google/Outlook/Apple Calendar.
     """
-    if not CALENDAR_TOKEN or not secrets.compare_digest(token, CALENDAR_TOKEN):
+    # compare_digest rejects non-ASCII str arguments outright (TypeError) — compare
+    # as UTF-8 bytes instead so a token with any non-ASCII character in the URL
+    # (bots/scanners, typos) 404s like any other wrong token instead of 500ing.
+    if not CALENDAR_TOKEN or not secrets.compare_digest(token.encode("utf-8"), CALENDAR_TOKEN.encode("utf-8")):
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND)
 
     meetings = db.execute(select(models.Meeting)).scalars().all()

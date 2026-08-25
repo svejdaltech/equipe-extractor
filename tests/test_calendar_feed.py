@@ -52,6 +52,16 @@ def test_build_ics_folds_long_lines_to_75_octets():
         assert len(line.encode("utf-8")) <= 75
 
 
+def test_build_ics_normalizes_bare_carriage_return():
+    # Regression test: a stray \r (not part of \r\n) left unescaped inside a
+    # content line could be misread as an extra line break by a calendar app.
+    meetings = [SimpleNamespace(id=1, display_name="Line1\rLine2", start_on="2025-01-01", end_on=None)]
+    ics = build_ics(meetings, "https://x")
+
+    assert "SUMMARY:Line1\\nLine2" in ics
+    assert all("\r" not in line for line in ics.split("\r\n"))
+
+
 @pytest.fixture
 def client(monkeypatch):
     monkeypatch.setenv("AUTH_USERNAME", "user")
@@ -68,6 +78,14 @@ def test_calendar_feed_404_when_not_configured(client):
 def test_calendar_feed_404_on_wrong_token(client):
     with patch("app.main.CALENDAR_TOKEN", "correct-token"):
         r = client.get("/calendar/wrong-token.ics")
+    assert r.status_code == 404
+
+
+def test_calendar_feed_non_ascii_token_returns_404_not_500(client):
+    # Regression test: secrets.compare_digest raises TypeError on non-ASCII str
+    # input — a bot/scanner or typo'd URL must still get a clean 404, not a 500.
+    with patch("app.main.CALENDAR_TOKEN", "correct-token"):
+        r = client.get("/calendar/" + "über.ics")
     assert r.status_code == 404
 
 
