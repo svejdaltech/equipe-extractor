@@ -2,7 +2,7 @@
 # Python.gitignore
 
 # Database
-users.db
+equipe.db
 .env
 
 # Byte-compiled / optimized / DLL files

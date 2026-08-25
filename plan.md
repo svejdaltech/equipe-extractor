@@ -16,25 +16,19 @@
 - [x] Replaced `print(...)` debugging with a module logger (`logging.getLogger(__name__)`) in `parser.py`, and dropped the dead/mixed-language debug comments and emoji prints.
 - [x] Added `tests/test_parser.py` and `tests/test_main.py` (pytest) covering `parse_schedule` against the real sample JSON in `json/`, `generate_excel`'s column ordering, non-200/invalid-ID error handling, and the Basic Auth flow (missing/wrong/correct credentials, temp-file cleanup). `app/requirements-dev.txt` adds `pytest`/`httpx` on top of the runtime deps. Root `conftest.py` makes `app`/`tests` importable without needing `PYTHONPATH` set manually. All 7 tests pass.
 
-## P2 — Rider photo-tracking database
+## P2 — Rider photo-tracking database — done
 
-Goal: let a photographer at an event see which riders they've already photographed, so they can step away and pick back up later without re-shooting or missing anyone. This needs persistent state per meeting, not just the stateless Excel export.
+Goal: let a photographer at an event see which riders they've already photographed, so they can step away and pick back up later without re-shooting or missing anyone.
 
-**Data model** (confirmed against `json/class_section.json` — each start has a stable `rider_id`, `horse_id`, `meeting_id`):
-- `riders` — `rider_id` (PK, from Equipe), `rider_name`, `club_name` (last seen values, refreshed on import)
-- `starts` — one row per (`meeting_id`, `class_section_id`, `rider_id`, `horse_id`), with `start_no`, `start_at`, `class_no`, `competition_name` — this is what drives the checklist view, since a rider can appear multiple times in one meeting on different horses/classes
-- `photographed` — `meeting_id`, `rider_id`, `photographed_at` — deliberately keyed per-meeting-per-rider (not per-start), since "have I shot this person yet today" is usually the question, not "have I shot this specific test". Single photographer confirmed, so no ownership/multi-user column needed. Tapping again just overwrites `photographed_at` with the current time — that's how a rider gets "refreshed" (see below), no separate undo/reset flow needed for now.
+UI design was confirmed via an interactive mockup before building (see memory `project_p2_checklist_ui`) — per-rider not per-start "seen" state, three status states (seen/missed/soon), flat divided list, sort pills, live elapsed-time readout.
 
-**Sync**: reuse `parse_schedule(meeting_id)` to populate/refresh `riders` + `starts` for a meeting instead of only streaming straight to Excel. Add an endpoint (or do it as a side effect of the existing export call) to import a meeting into the DB.
-
-**UI**: per meeting, one "Excel-like" web view (confirmed via `nice to have.md`, folded in here) — a sortable table (click a column header to sort by it, e.g. start time, rider, class), with a tap-to-mark "seen at [time]" action per rider and a "download as Excel" button that produces the same file as `GET /`. The live "time since last seen" readout (`time_now - photographed_at`) sits next to the absolute "set kl. HH:MM" timestamp for each already-marked rider — the elapsed time is what actually matters day-to-day: at a glance the photographer sees who they shot a while ago vs. just now, so they know who's "due" for a re-check after a break. Compute the ticking part client-side (`setInterval` off the server-supplied ISO `photographed_at`) so it updates without a page reload; not-yet-seen riders just show no timestamp. Plain server-rendered HTML (Jinja2 — will need re-adding to `requirements.txt` now that the old auth stack pulled it out) with small vanilla JS for the toggle/ticking/sort is enough; no SPA needed. Sort by start time by default so it doubles as a running order.
-
-**Endpoints** (all behind the same `require_auth` Basic Auth dependency added in P1):
-- `GET /meetings/{meeting_id}` — the sortable web view described above
-- `POST /meetings/{meeting_id}/riders/{rider_id}/seen` — mark/re-mark seen now (sets `photographed_at = now`)
-- `GET /meetings/{meeting_id}/export` — Excel download, same output as today's `GET /`, just reachable from the web view too
-
-**Infra**: SQLite is fine for a single photographer/single instance, but `docker-compose.yml` currently has no volume — the DB file would be lost on every container recreate. Add a named volume for the SQLite file before relying on this for real events.
+- [x] **Data model** (`app/models.py`): `Meeting` (id, display_name, start_on, synced_at), `Rider` (id, name, club_name), `Start` (Equipe's own start `id` as PK, meeting_id, rider_id, horse, class info, start_at), `Photographed` (composite PK `meeting_id`+`rider_id`, `photographed_at`). One table beyond the original 3-table sketch (`Meeting`) — needed to render a page title/date without an extra network round-trip on every request.
+- [x] **Sync** (`app/sync.py`): `sync_meeting(db, meeting_id)` upserts riders/starts from `parse_schedule` + the new `parser.get_meeting_info()` helper. Runs on every `GET /meetings/{id}` load, so the checklist always reflects the latest schedule.
+- [x] **UI** (`app/templates/checklist.html`): the confirmed mockup ported into a real Jinja2 template — same CSS/JS, data hydrated from the DB instead of hardcoded, "Marker set"/"Marker igen" now POST to the real endpoint and use the server's returned timestamp.
+- [x] **Endpoints**, all behind `require_auth`: `GET /meetings/{meeting_id}` (sync + checklist view), `POST /meetings/{meeting_id}/riders/{rider_id}/seen` (mark/re-mark, 404 on unknown rider), `GET /meetings/{meeting_id}/export` (same Excel output as `GET /`, reachable from the checklist's download button).
+- [x] **Infra**: `docker-compose.yml` now has a named volume (`equipe-data:/data`) and `DATABASE_URL=sqlite:////data/equipe.db`, so the DB survives container recreation. Local/dev default is `sqlite:///./equipe.db` (gitignored).
+- [x] Fixed a timezone round-trip bug found while building this: SQLite drops tzinfo on read-back, so `photographed_at` (always written as UTC) needs its UTC offset reattached before being sent to the client — otherwise the browser would misread it as already-local and show times off by the UTC offset. `start_at` deliberately does *not* get this treatment, since Equipe's times are already the event's own local time and the browser viewing it is physically at that event. Covered by a regression test.
+- [x] Tests: `tests/test_checklist.py` covers `sync_meeting` upserts, the checklist page rendering real rider/horse data, mark/re-mark refreshing the timestamp, unknown-rider 404, the `/export` route, and the timezone regression above. 19/19 tests pass across the whole suite.
 
 ## P3 — iCal integration (from `nice to have.md`)
 

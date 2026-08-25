@@ -34,7 +34,7 @@ def get_json(url):
         raise UpstreamError(f"Invalid JSON from {url}") from e
 
 
-def parse_schedule(meeting_id):
+def _fetch_schedule(meeting_id):
     _validate_id(meeting_id, "meeting_id")
 
     meeting_url = f"https://online.equipe.com/api/v1/meetings/{meeting_id}/schedule"
@@ -47,6 +47,21 @@ def parse_schedule(meeting_id):
             schedule = json.loads(schedule)
         except json.JSONDecodeError:
             raise UpstreamError("Ugyldig JSON returneret fra get_meeting_schedule")
+
+    return schedule
+
+
+def get_meeting_info(meeting_id):
+    schedule = _fetch_schedule(meeting_id)
+    return {
+        "display_name": schedule.get("display_name") or schedule.get("name"),
+        "start_on": schedule.get("start_on"),
+        "end_on": schedule.get("end_on"),
+    }
+
+
+def parse_schedule(meeting_id):
+    schedule = _fetch_schedule(meeting_id)
 
     competitions_data = schedule.get("meeting_classes")
     if not isinstance(competitions_data, list):

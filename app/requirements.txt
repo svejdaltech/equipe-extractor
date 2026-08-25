@@ -3,3 +3,5 @@ uvicorn
 requests
 pandas
 openpyxl
+sqlalchemy
+jinja2

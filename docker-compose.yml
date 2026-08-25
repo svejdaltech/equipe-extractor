@@ -5,12 +5,19 @@ services:
     restart: unless-stopped
     env_file:
       - .env
+    environment:
+      - DATABASE_URL=sqlite:////data/equipe.db
 
     # Expose port to other containers only, not host
     expose:
       - "8000"
+    volumes:
+      - equipe-data:/data
     networks:
       - proxy-tier
+
+volumes:
+  equipe-data:
 
 networks:
   proxy-tier:
