@@ -89,6 +89,23 @@ def test_calendar_feed_non_ascii_token_returns_404_not_500(client):
     assert r.status_code == 404
 
 
+def test_calendar_feed_head_request_succeeds(client):
+    # Regression test: FastAPI/Starlette doesn't add HEAD support automatically
+    # for a GET-only route. Some calendar clients (observed: Thunderbird) send a
+    # HEAD request to validate the URL before subscribing — a 405 there made
+    # Thunderbird report "could not find calendars at this location".
+    with patch("app.main.CALENDAR_TOKEN", "correct-token"):
+        r = client.head("/calendar/correct-token.ics")
+    assert r.status_code == 200
+    assert r.headers["content-type"].startswith("text/calendar")
+
+
+def test_calendar_feed_head_request_404s_on_wrong_token(client):
+    with patch("app.main.CALENDAR_TOKEN", "correct-token"):
+        r = client.head("/calendar/wrong-token.ics")
+    assert r.status_code == 404
+
+
 def test_calendar_feed_returns_ics_with_correct_token(client):
     with patched_sync(rows=SAMPLE_ROWS, info=SAMPLE_MEETING_INFO):
         client.get("/meetings/69835", auth=("user", "pass"))

@@ -242,18 +242,27 @@ def save_settings(
     return {"excel_column_order": payload.excel_column_order.strip()}
 
 
-@app.get("/calendar/{token}.ics")
+@app.api_route("/calendar/{token}.ics", methods=["GET", "HEAD"])
 def calendar_feed(token: str, request: Request, db: Session = Depends(get_db)):
     """
     Token-protected iCal feed (no Basic Auth — calendar apps generally can't do
     it) with one all-day event per synced meeting, linking back to its checklist.
     Subscribe to this URL directly from Google/Outlook/Apple Calendar.
+
+    Explicitly handles HEAD too — FastAPI/Starlette doesn't add it automatically
+    for a GET-only route, and some calendar clients (observed: Thunderbird) send
+    a HEAD request first to validate the URL before subscribing. A 405 there was
+    enough to make Thunderbird report "could not find calendars at this location"
+    even though a plain GET worked fine.
     """
     # compare_digest rejects non-ASCII str arguments outright (TypeError) — compare
     # as UTF-8 bytes instead so a token with any non-ASCII character in the URL
     # (bots/scanners, typos) 404s like any other wrong token instead of 500ing.
     if not CALENDAR_TOKEN or not secrets.compare_digest(token.encode("utf-8"), CALENDAR_TOKEN.encode("utf-8")):
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND)
+
+    if request.method == "HEAD":
+        return Response(status_code=200, media_type="text/calendar; charset=utf-8")
 
     meetings = db.execute(select(models.Meeting)).scalars().all()
     base_url = PUBLIC_BASE_URL or str(request.base_url).rstrip("/")
