@@ -45,8 +45,9 @@ Resolved the three open questions before building:
 - [x] Documented in `README.md`: generating a token (`openssl rand -hex 32`), the `PUBLIC_BASE_URL` env var, and how to subscribe from Google/Outlook/Apple Calendar.
 - [x] Tests: `tests/test_calendar_feed.py` covers `build_ics` (basic event, multi-day exclusive end date, escaping, line folding, skipping meetings with no date) and the route (404 when unconfigured, 404 on wrong token, 200 with correct content and links). 33/33 tests pass across the whole suite.
 
-## P4 — Nice to haves
+## P4 — Nice to haves — done
 
-- [ ] Sort output rows by `start_time`/`start_no` in the Excel export, not just column order (original ask in this file).
-- [ ] Cache `class_section` lookups within a single export request — right now each section is fetched serially and re-fetched on every export of the same meeting.
-- [ ] Restrict/hide `/docs` in production if this ends up handling anything beyond public schedule data.
+- [x] `generate_excel` now sorts rows by actual start time (`start_at`), falling back to `start_no` (numeric, not lexicographic) when start time is missing — a stable sort so the export reads as a running order. Verified against a real export from the live container.
+- [x] `parse_schedule_from_data` now caches `class_section` fetches per call (`section_cache` dict keyed by `class_section_id`), so a section referenced from more than one `meeting_class` in the same schedule is only fetched once.
+- [x] `/docs`, `/redoc`, and `/openapi.json` are disabled (`FastAPI(docs_url=None, redoc_url=None, openapi_url=None)`) — the app now handles rider PII and an auth-token-protected calendar feed, not just public schedule data.
+- [x] Tests added for all three (row sorting incl. numeric start_no tiebreak, class_section fetch caching, docs endpoints 404). 40/40 tests pass.

@@ -72,6 +72,8 @@ def parse_schedule_from_data(schedule):
         raise UpstreamError(f"Uventet format: 'meeting_classes' mangler eller er ikke en liste: {schedule}")
 
     competitions = []
+    section_cache = {}  # class_section_id -> details, in case the same section is
+                         # referenced from more than one meeting_class in this schedule
 
     for comp in competitions_data:
         comp_info = {
@@ -84,8 +86,12 @@ def parse_schedule_from_data(schedule):
             class_section_id = section.get("id")
             _validate_id(class_section_id, "class_section_id")
 
-            class_section_url = f"https://online.equipe.com/api/v1/class_sections/{class_section_id}"
-            section_details = get_json(class_section_url)
+            if class_section_id in section_cache:
+                section_details = section_cache[class_section_id]
+            else:
+                class_section_url = f"https://online.equipe.com/api/v1/class_sections/{class_section_id}"
+                section_details = get_json(class_section_url)
+                section_cache[class_section_id] = section_details
 
             if section_details and section_details.get("starts"):
                 for start in section_details["starts"]:
@@ -141,6 +147,18 @@ def generate_excel(data: list[dict]) -> str:
     preferred = [col for col in preferred_columns if col in df.columns]
     others = [col for col in df.columns if col not in preferred]
     df = df[preferred + others]
+
+    # Sort rows by actual start time (falling back to start_no as a tiebreaker/
+    # backup), so the export reads as a running order instead of raw API order.
+    sort_cols = []
+    if "start_at" in df.columns:
+        df["_sort_start_at"] = pd.to_datetime(df["start_at"], errors="coerce", utc=True)
+        sort_cols.append("_sort_start_at")
+    if "start_no" in df.columns:
+        df["_sort_start_no"] = pd.to_numeric(df["start_no"], errors="coerce")
+        sort_cols.append("_sort_start_no")
+    if sort_cols:
+        df = df.sort_values(by=sort_cols, kind="mergesort").drop(columns=sort_cols).reset_index(drop=True)
 
     # Optionally, expand 'points' array to separate columns
     if "points" in df.columns and not df["points"].isnull().all():

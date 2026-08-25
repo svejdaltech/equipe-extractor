@@ -19,6 +19,12 @@ def test_export_requires_auth(client):
     assert r.headers["www-authenticate"] == "Basic"
 
 
+def test_api_docs_are_disabled(client):
+    assert client.get("/docs").status_code == 404
+    assert client.get("/redoc").status_code == 404
+    assert client.get("/openapi.json").status_code == 404
+
+
 def test_export_rejects_wrong_credentials(client):
     r = client.get("/?meeting_id=1", auth=("user", "wrong"))
     assert r.status_code == 401

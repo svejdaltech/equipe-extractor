@@ -17,7 +17,9 @@ from app.database import Base, engine, ensure_column, get_db
 from app.parser import UpstreamError, generate_excel, parse_schedule
 from app.sync import sync_meeting
 
-app = FastAPI()
+# No public API docs: the app now handles rider PII and an auth-token-protected
+# calendar feed, not just the original public schedule export.
+app = FastAPI(docs_url=None, redoc_url=None, openapi_url=None)
 templates = Jinja2Templates(directory="app/templates")
 
 Base.metadata.create_all(bind=engine)

@@ -59,6 +59,34 @@ def test_parse_schedule_raises_upstream_error_on_bad_shape():
             parser.parse_schedule("69835")
 
 
+def test_parse_schedule_caches_repeated_class_section_fetch():
+    # Same class_section id referenced from two different meeting_classes must
+    # only be fetched once per parse_schedule_from_data() call.
+    schedule = {
+        "meeting_classes": [
+            {"name": "Class A", "start_at": "2025-01-01T09:00:00+00:00", "class_no": 1,
+             "class_sections": [{"id": 111, "state": "finished"}]},
+            {"name": "Class B", "start_at": "2025-01-01T10:00:00+00:00", "class_no": 2,
+             "class_sections": [{"id": 111, "state": "finished"}]},
+        ]
+    }
+    section_response = {"starts": [{"id": 1, "rider_id": 1, "rider_name": "A", "start_at": "2025-01-01T09:05:00+00:00"}]}
+    call_count = {"n": 0}
+
+    def fake_get(url, timeout=None):
+        resp = MagicMock()
+        resp.status_code = 200
+        call_count["n"] += 1
+        resp.json.return_value = section_response
+        return resp
+
+    with patch("app.parser.requests.get", side_effect=fake_get):
+        rows = parser.parse_schedule_from_data(schedule)
+
+    assert call_count["n"] == 1
+    assert len(rows) == 2
+
+
 def test_generate_excel_puts_preferred_columns_first():
     data = [{"rider_name": "A", "extra_field": "x", "competition_name": "Test"}]
 
@@ -67,6 +95,38 @@ def test_generate_excel_puts_preferred_columns_first():
         import pandas as pd
         df = pd.read_excel(file_path)
         assert list(df.columns) == ["competition_name", "rider_name", "extra_field"]
+    finally:
+        os.remove(file_path)
+
+
+def test_generate_excel_sorts_rows_by_start_time():
+    data = [
+        {"rider_name": "Late", "start_at": "2025-01-01T12:00:00+00:00", "start_no": "5"},
+        {"rider_name": "Early", "start_at": "2025-01-01T09:00:00+00:00", "start_no": "1"},
+        {"rider_name": "Middle", "start_at": "2025-01-01T10:30:00+00:00", "start_no": "3"},
+    ]
+
+    file_path = parser.generate_excel(data)
+    try:
+        import pandas as pd
+        df = pd.read_excel(file_path)
+        assert list(df["rider_name"]) == ["Early", "Middle", "Late"]
+    finally:
+        os.remove(file_path)
+
+
+def test_generate_excel_sorts_numerically_by_start_no_when_start_at_missing():
+    data = [
+        {"rider_name": "Ten", "start_no": "10"},
+        {"rider_name": "Two", "start_no": "2"},
+    ]
+
+    file_path = parser.generate_excel(data)
+    try:
+        import pandas as pd
+        df = pd.read_excel(file_path)
+        # Numeric order, not lexicographic ("10" would sort before "2" as strings).
+        assert list(df["rider_name"]) == ["Two", "Ten"]
     finally:
         os.remove(file_path)
 
