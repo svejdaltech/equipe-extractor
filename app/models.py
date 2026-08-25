@@ -42,3 +42,10 @@ class Photographed(Base):
     meeting_id = Column(Integer, ForeignKey("meetings.id"), primary_key=True)
     rider_id = Column(Integer, ForeignKey("riders.id"), primary_key=True)
     photographed_at = Column(DateTime(timezone=True), nullable=False)
+
+
+class Setting(Base):
+    __tablename__ = "settings"
+
+    key = Column(String, primary_key=True)
+    value = Column(String, nullable=True)

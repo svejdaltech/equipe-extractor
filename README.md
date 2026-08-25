@@ -28,6 +28,7 @@ GET  /meetings/<id>                              — rytter-tjekliste (synker fr
 POST /meetings/<id>/riders/<rider_id>/seen       — marker (eller genmarker) en rytter som "set"
 GET  /meetings/<id>/export                       — samme Excel-download som GET /, linket fra tjeklisten
 GET  /calendar/<CALENDAR_TOKEN>.ics              — kalender-feed, ét stævne per synkroniseret meeting (se #Kalender)
+GET  /settings                                   — indstillinger (pt. Excel-kolonnerækkefølge), se #Excel-kolonner
 
 #Auth
 Alle almindelige endpoints kræver HTTP Basic Auth. Sæt disse env vars før programmet startes (både lokalt og i docker):
@@ -56,11 +57,12 @@ default er sqlite:///./equipe.db lokalt. I docker-compose peger den på et navng
 så data ikke forsvinder når containeren genskabes.
 
 #Excel-kolonner
-Kolonnerækkefølgen i Excel-eksporten kan styres via env var EXCEL_COLUMN_ORDER, kommasepareret liste
-af kolonnenavne, fx:
-EXCEL_COLUMN_ORDER=rider_name,horse_name,club_name,start_no,start_at
-Kolonner der ikke er nævnt, kommer efter i deres oprindelige rækkefølge. Uden env var sat bruges en
-fornuftig default (competition_name, start_time, class_no, rider_name, horse_name, ...).
+Kolonnerækkefølgen i Excel-eksporten styres fra selve appen, ikke .env — gå til /settings (kræver
+Basic Auth, samme login som resten), og indtast en kommasepareret liste af kolonnenavne, fx:
+rider_name,horse_name,club_name,start_no,start_at
+Kolonner der ikke er nævnt, kommer efter i deres oprindelige rækkefølge. Ændringer gælder med det
+samme på næste eksport — ingen genstart af containeren nødvendig. Tom værdi = standard-rækkefølgen
+(competition_name, start_time, class_no, rider_name, horse_name, ...).
 
 #Kør programmet
 Kør programmet lokalt (ikke i docker):

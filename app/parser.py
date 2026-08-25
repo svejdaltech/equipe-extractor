@@ -112,7 +112,10 @@ def parse_schedule(meeting_id):
     return parse_schedule_from_data(fetch_schedule(meeting_id))
 
 
-def generate_excel(data: list[dict]) -> str:
+def generate_excel(data: list[dict], column_order: list[str] | None = None) -> str:
+    """column_order overrides the default column order (e.g. from the /settings
+    page) — a list of column names to put first. Unlisted columns still appear
+    afterwards. Falls back to a sensible default when not given."""
 
     import os
     import uuid
@@ -136,15 +139,7 @@ def generate_excel(data: list[dict]) -> str:
         "class_section_state",
     ]
 
-    # EXCEL_COLUMN_ORDER lets the column order be tuned via env var (e.g. in
-    # .env) instead of a code change — comma-separated column names, e.g.
-    # "rider_name,horse_name,club_name". Unlisted columns still appear
-    # afterwards, same as the default order's fallback behaviour.
-    env_order = os.environ.get("EXCEL_COLUMN_ORDER")
-    if env_order:
-        preferred_columns = [c.strip() for c in env_order.split(",") if c.strip()]
-    else:
-        preferred_columns = default_columns
+    preferred_columns = column_order if column_order else default_columns
 
     if not data:
         logger.warning("generate_excel called with no data")

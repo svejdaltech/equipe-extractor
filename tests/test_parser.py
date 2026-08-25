@@ -99,11 +99,10 @@ def test_generate_excel_puts_preferred_columns_first():
         os.remove(file_path)
 
 
-def test_generate_excel_respects_excel_column_order_env_var(monkeypatch):
-    monkeypatch.setenv("EXCEL_COLUMN_ORDER", "horse_name,rider_name")
+def test_generate_excel_respects_column_order_argument():
     data = [{"rider_name": "A", "horse_name": "H", "extra_field": "x", "competition_name": "Test"}]
 
-    file_path = parser.generate_excel(data)
+    file_path = parser.generate_excel(data, column_order=["horse_name", "rider_name"])
     try:
         import pandas as pd
         df = pd.read_excel(file_path)

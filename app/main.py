@@ -7,6 +7,7 @@ from fastapi import BackgroundTasks, Depends, FastAPI, HTTPException, Query, Req
 from fastapi.responses import FileResponse, HTMLResponse, Response
 from fastapi.security import HTTPBasic, HTTPBasicCredentials
 from fastapi.templating import Jinja2Templates
+from pydantic import BaseModel
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
@@ -15,6 +16,7 @@ from app.calendar_feed import build_ics
 from app.checklist import get_checklist_data
 from app.database import Base, engine, ensure_column, get_db
 from app.parser import UpstreamError, generate_excel, parse_schedule
+from app.settings import get_setting, set_setting
 from app.sync import sync_meeting
 
 # No public API docs: the app now handles rider PII and an auth-token-protected
@@ -72,10 +74,13 @@ def _embed_json(data) -> str:
     return json.dumps(data).replace("</", "<\\/")
 
 
-def _export_excel(meeting_id: str, background_tasks: BackgroundTasks) -> FileResponse:
+def _export_excel(meeting_id: str, background_tasks: BackgroundTasks, db: Session) -> FileResponse:
+    raw_order = get_setting(db, "excel_column_order")
+    column_order = [c.strip() for c in raw_order.split(",") if c.strip()] if raw_order else None
+
     try:
         starts = parse_schedule(meeting_id)
-        file_path = generate_excel(starts)
+        file_path = generate_excel(starts, column_order=column_order)
     except ValueError as e:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
     except UpstreamError as e:
@@ -93,24 +98,26 @@ def _export_excel(meeting_id: str, background_tasks: BackgroundTasks) -> FileRes
 def export_to_excel(
     background_tasks: BackgroundTasks,
     meeting_id: str = Query(..., description="Equipe API endpoint"),
+    db: Session = Depends(get_db),
     _auth: None = Depends(require_auth),
 ):
     """
     Export the schedule for a meeting ID to Excel.
     """
-    return _export_excel(meeting_id, background_tasks)
+    return _export_excel(meeting_id, background_tasks, db)
 
 
 @app.get("/meetings/{meeting_id}/export")
 def export_meeting(
     meeting_id: str,
     background_tasks: BackgroundTasks,
+    db: Session = Depends(get_db),
     _auth: None = Depends(require_auth),
 ):
     """
     Same Excel export as GET /, reachable from the checklist view below.
     """
-    return _export_excel(meeting_id, background_tasks)
+    return _export_excel(meeting_id, background_tasks, db)
 
 
 @app.get("/meetings/{meeting_id}", response_class=HTMLResponse)
@@ -180,6 +187,37 @@ def mark_rider_seen(
     db.commit()
 
     return {"rider_id": rider_id, "photographed_at": now.isoformat()}
+
+
+class SettingsPayload(BaseModel):
+    excel_column_order: str = ""
+
+
+@app.get("/settings", response_class=HTMLResponse)
+def settings_page(
+    request: Request,
+    db: Session = Depends(get_db),
+    _auth: None = Depends(require_auth),
+):
+    """
+    Small in-app settings page (currently just the Excel export column order),
+    so this can be changed on the fly without SSH/.env access mid-event.
+    """
+    return templates.TemplateResponse(
+        request,
+        "settings.html",
+        {"excel_column_order": get_setting(db, "excel_column_order")},
+    )
+
+
+@app.post("/settings")
+def save_settings(
+    payload: SettingsPayload,
+    db: Session = Depends(get_db),
+    _auth: None = Depends(require_auth),
+):
+    set_setting(db, "excel_column_order", payload.excel_column_order.strip())
+    return {"excel_column_order": payload.excel_column_order.strip()}
 
 
 @app.get("/calendar/{token}.ics")

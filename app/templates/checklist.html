@@ -124,6 +124,21 @@
     white-space: nowrap;
   }
 
+  .eyebrow-actions {
+    display: flex;
+    align-items: baseline;
+    gap: 0.85rem;
+  }
+
+  .settings-link {
+    font-size: 0.72rem;
+    color: var(--ink-faint);
+    text-decoration: underline;
+    white-space: nowrap;
+  }
+
+  .settings-link:hover { color: var(--ink-muted); }
+
   .title {
     margin: 0.15rem 0 0;
     font-family: "Fraunces", Georgia, serif;
@@ -490,7 +505,10 @@
   <header class="topbar">
     <div class="eyebrow-row">
       <p class="eyebrow">Startliste{% if meeting_date %} · {{ meeting_date }}{% endif %}</p>
-      <p class="clock" id="clock"></p>
+      <div class="eyebrow-actions">
+        <p class="clock" id="clock"></p>
+        <a class="settings-link" href="/settings">Indstillinger</a>
+      </div>
     </div>
     <div>
       <h1 class="title">{{ meeting_title }}</h1>
