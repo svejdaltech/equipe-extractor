@@ -131,6 +131,25 @@ def test_generate_excel_sorts_numerically_by_start_no_when_start_at_missing():
         os.remove(file_path)
 
 
+def test_generate_excel_sorts_alphanumeric_start_no_near_its_numeric_neighbor():
+    # Regression test: a plain pd.to_numeric(errors="coerce") turns a jump-off/
+    # re-ride bib like "3A" into NaN, which sorts to the very end instead of
+    # next to bib 3 where it belongs.
+    data = [
+        {"rider_name": "Ten", "start_no": "10"},
+        {"rider_name": "ThreeA", "start_no": "3A"},
+        {"rider_name": "Two", "start_no": "2"},
+    ]
+
+    file_path = parser.generate_excel(data)
+    try:
+        import pandas as pd
+        df = pd.read_excel(file_path)
+        assert list(df["rider_name"]) == ["Two", "ThreeA", "Ten"]
+    finally:
+        os.remove(file_path)
+
+
 def test_generate_excel_cleans_up_partial_file_on_write_failure():
     data = [{"rider_name": "A"}]
 

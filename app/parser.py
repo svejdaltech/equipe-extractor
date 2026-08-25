@@ -155,7 +155,11 @@ def generate_excel(data: list[dict]) -> str:
         df["_sort_start_at"] = pd.to_datetime(df["start_at"], errors="coerce", utc=True)
         sort_cols.append("_sort_start_at")
     if "start_no" in df.columns:
-        df["_sort_start_no"] = pd.to_numeric(df["start_no"], errors="coerce")
+        # Extract the leading digit run so an alphanumeric bib (e.g. a jump-off/
+        # re-ride entry like "3A") sorts next to its numeric neighbor instead of
+        # becoming NaN (via a plain to_numeric) and dropping to the very end.
+        leading_digits = df["start_no"].astype(str).str.extract(r"(\d+)", expand=False)
+        df["_sort_start_no"] = pd.to_numeric(leading_digits, errors="coerce")
         sort_cols.append("_sort_start_no")
     if sort_cols:
         df = df.sort_values(by=sort_cols, kind="mergesort").drop(columns=sort_cols).reset_index(drop=True)
