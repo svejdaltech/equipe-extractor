@@ -55,6 +55,10 @@ Uden CALENDAR_TOKEN sat giver endpointet 404 (kalender-feedet er altså slået f
 Sæt evt. også PUBLIC_BASE_URL (fx https://equipe.svejdaltech.dk) så links i kalenderen peger rigtigt —
 uden den bruges request'ens eget host, hvilket kan blive forkert bag en reverse proxy.
 
+Når CALENDAR_TOKEN er sat, viser hvert stævnes tjekliste (/meetings/<id>) også et "Kalender"-link direkte
+på siden (webcal:// for at abonnere med det samme i understøttede apps, plus et almindeligt https-link
+til at kopiere/indsætte manuelt) — ingen grund til at huske eller selv bygge URL'en.
+
 Abonnér på feedet fra jeres kalender-app:
 https://equipe.svejdaltech.dk/calendar/<CALENDAR_TOKEN>.ics
 — Google Calendar: "Andre kalendere" → "Fra URL"

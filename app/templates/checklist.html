@@ -507,12 +507,17 @@
       <p class="eyebrow">Startliste{% if meeting_date %} · {{ meeting_date }}{% endif %}</p>
       <div class="eyebrow-actions">
         <p class="clock" id="clock"></p>
+        {% if calendar_urls %}
+        <a class="settings-link" href="{{ calendar_urls.webcal }}">Kalender</a>
+        {% endif %}
         <a class="settings-link" href="/settings">Indstillinger</a>
       </div>
     </div>
     <div>
       <h1 class="title">{{ meeting_title }}</h1>
-      <p class="note">Tryk “Marker set” for at markere en rytter — det dækker alle deres starter i dette stævne, ikke kun den ene klasse.</p>
+      <p class="note">Tryk “Marker set” for at markere en rytter — det dækker alle deres starter i dette stævne, ikke kun den ene klasse.
+        {% if calendar_urls %}Stævnet ligger også i <a href="{{ calendar_urls.webcal }}">kalender-feedet</a> (<a href="{{ calendar_urls.https }}">kopiér link</a> til at abonnere manuelt).{% endif %}
+      </p>
     </div>
     <div class="progress-block">
       <div class="progress-text">

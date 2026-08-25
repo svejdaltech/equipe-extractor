@@ -165,6 +165,24 @@ def test_checklist_renders_riders(client):
     assert "AMADEUS" in r.text
 
 
+def test_checklist_hides_calendar_link_when_unconfigured(client):
+    with patched_sync():
+        r = client.get("/meetings/69835", auth=("user", "pass"))
+
+    assert "webcal://" not in r.text
+    assert "/calendar/" not in r.text
+
+
+def test_checklist_shows_calendar_link_when_configured(client):
+    with patch("app.main.CALENDAR_TOKEN", "sekrettoken"), \
+         patch("app.main.PUBLIC_BASE_URL", "https://equipe.svejdaltech.dk"), \
+         patched_sync():
+        r = client.get("/meetings/69835", auth=("user", "pass"))
+
+    assert "webcal://equipe.svejdaltech.dk/calendar/sekrettoken.ics" in r.text
+    assert "https://equipe.svejdaltech.dk/calendar/sekrettoken.ics" in r.text
+
+
 def test_mark_seen_then_remark_refreshes_timestamp(client):
     with patched_sync():
         client.get("/meetings/69835", auth=("user", "pass"))

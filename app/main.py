@@ -74,6 +74,20 @@ def _embed_json(data) -> str:
     return json.dumps(data).replace("</", "<\\/")
 
 
+def _calendar_urls(request: Request):
+    # None (hides the link entirely) when the calendar feed is opt-in but unset —
+    # matches /calendar/{token}.ics's own 404-if-unconfigured behaviour.
+    if not CALENDAR_TOKEN:
+        return None
+    base_url = PUBLIC_BASE_URL or str(request.base_url).rstrip("/")
+    https_url = f"{base_url}/calendar/{CALENDAR_TOKEN}.ics"
+    # webcal:// signals "subscribe" (not "download once") to compatible calendar
+    # apps/OSes, so it's offered as the primary action alongside the plain https
+    # link some clients' "add calendar from URL" flows expect to be pasted.
+    webcal_url = "webcal://" + https_url.split("://", 1)[1]
+    return {"https": https_url, "webcal": webcal_url}
+
+
 def _export_excel(meeting_id: str, background_tasks: BackgroundTasks, db: Session) -> FileResponse:
     raw_order = get_setting(db, "excel_column_order")
     column_order = [c.strip() for c in raw_order.split(",") if c.strip()] if raw_order else None
@@ -155,6 +169,7 @@ def meeting_checklist(
             "meeting_id": meeting_id_int,
             "meeting_title": meeting.display_name or f"Stævne {meeting_id_int}",
             "meeting_date": _format_danish_date(meeting.start_on),
+            "calendar_urls": _calendar_urls(request),
             "riders_json": _embed_json(data["riders"]),
             "starts_json": _embed_json(data["starts"]),
             "seen_at_json": _embed_json(data["seenAt"]),
