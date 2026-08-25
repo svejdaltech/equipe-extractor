@@ -3,6 +3,8 @@ FROM python:3.13-slim
 # Set working directory inside the container
 WORKDIR /app
 
+#RUN mkdir -p /app && chmod 777 /app
+
 # Copy whole project (assuming you're in the root of your project)
 COPY ./app /app/app
 

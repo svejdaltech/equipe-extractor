@@ -1,28 +1,32 @@
 import requests
 
+REQUEST_TIMEOUT = 10  # seconds
+
+
+def _validate_id(value, name):
+    if value is None or not str(value).isdigit():
+        raise ValueError(f"Invalid {name}: {value!r} (expected a numeric ID)")
+
+
 def get_json(url):
-    response = requests.get(url)
+    response = requests.get(url, timeout=REQUEST_TIMEOUT)
+
+    if response.status_code != 200:
+        print(f"[ERROR] Request to {url} failed with status {response.status_code}")
+        print(f"Raw response: {response.text}")
+        raise ValueError(f"Request to {url} failed with status {response.status_code}")
 
     try:
-        data = response.json()
-        # print(f"[DEBUG] Fetched class_section {class_section_id}:")
-        # print(data)
-        return data
-    except Exception as e:
-        print(f"[ERROR] Failed to parse JSON for class_section {class_section_id}")
+        return response.json()
+    except ValueError as e:
+        print(f"[ERROR] Failed to parse JSON from {url}")
         print(f"Raw response: {response.text}")
         raise e
 
 
-    if response.status_code == 200:
-        print("Class section: ", url)
-        return response.json()
-    else:
-        print(f"Warning: could not fetch class_section {class_section_id}")
-        return None
-
 def parse_schedule(meeting_id):
-    competitions = []
+    _validate_id(meeting_id, "meeting_id")
+
     meeting_url = f"https://online.equipe.com/api/v1/meetings/{meeting_id}/schedule"
     schedule = get_json(meeting_url)
 
@@ -41,13 +45,7 @@ def parse_schedule(meeting_id):
     if not isinstance(competitions_data, list):
         raise ValueError(f"Uventet format: 'meeting_classes' mangler eller er ikke en liste: {schedule}")
 
-
     competitions = []
-
-    for comp in schedule:
-        if not isinstance(comp, dict):
-            continue  # spring strings eller andet skrald over
-
 
     for comp in competitions_data:
         comp_info = {
@@ -58,6 +56,7 @@ def parse_schedule(meeting_id):
 
         for section in comp.get("class_sections", []):
             class_section_id = section.get("id")
+            _validate_id(class_section_id, "class_section_id")
 
             class_section_url = f"https://online.equipe.com/api/v1/class_sections/{class_section_id}"
             section_details = get_json(class_section_url)

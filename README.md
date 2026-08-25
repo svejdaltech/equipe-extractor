@@ -22,13 +22,22 @@ Yderligere information fra begivenheden
 https://online.equipe.com/api/v1/meetings/69835/horses
 https://online.equipe.com/api/v1/meetings/69835/riders
 
+#Auth
+Endpointet kræver HTTP Basic Auth. Sæt disse env vars før programmet startes (både lokalt og i docker):
+AUTH_USERNAME
+AUTH_PASSWORD
+
 #Kør programmet
 Kør programmet lokalt (ikke i docker):
+export AUTH_USERNAME=... AUTH_PASSWORD=...
 uvicorn app.main:app --reload
 
 Byg til docker:
 sudo docker build -t equipe-exporter .
-sudo docker run -it --rm -p 8000:80 equipe-exporter
+sudo docker run -it --rm -p 8000:80 -e AUTH_USERNAME=... -e AUTH_PASSWORD=... equipe-exporter
+
+Kør med docker-compose (læser AUTH_USERNAME/AUTH_PASSWORD fra en lokal .env fil, som ikke er tjekket ind i git):
+docker compose up
 
 
 Byg til Azure Container registry

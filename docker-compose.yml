@@ -3,18 +3,11 @@ services:
     build: .
     container_name: fastapi_app
     restart: unless-stopped
-    #ports:
-    #  - "8000:8000"
+    env_file:
+      - .env
+
+    # Expose port to other containers only, not host
     expose:
-      - "8000"  # Kun internt netværk, ikke eksponeret til host
-    volumes:
-      - ./users.db:/app/users.db
+      - "8000"
     networks:
       - proxy-tier
-    environment:
-      - SECRET_KEY=din-meget-hemmelige-nøgle
-
-networks:
-  proxy-tier:
-    #driver: bridge
-    external: true  # bruger det eksisterende netværk med Nginx Proxy Manager
