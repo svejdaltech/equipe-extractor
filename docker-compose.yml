@@ -11,3 +11,7 @@ services:
       - "8000"
     networks:
       - proxy-tier
+
+networks:
+  proxy-tier:
+    external: true  # existing network shared with Nginx Proxy Manager
