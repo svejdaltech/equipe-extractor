@@ -37,6 +37,13 @@ SAMPLE_MEETING_INFO = {
     "end_on": "2025-04-13",
 }
 
+# Same rider, two starts (different class/horse) — this is the normal case that
+# crashed sync_meeting in production with a UNIQUE constraint failure on riders.id.
+MULTI_START_RIDER_ROWS = [
+    {**SAMPLE_ROWS[0], "id": 17949729, "class_no": 1, "start_no": "3"},
+    {**SAMPLE_ROWS[0], "id": 17949730, "class_no": 3, "start_no": "2", "horse_name": "Cassidy"},
+]
+
 
 @contextmanager
 def patched_sync(rows=SAMPLE_ROWS, info=SAMPLE_MEETING_INFO):
@@ -74,6 +81,25 @@ def test_sync_meeting_upserts_rows():
         start = db.get(models.Start, 17949729)
         assert start.meeting_id == 69835
         assert start.horse_name == "AMADEUS"
+    finally:
+        db.close()
+
+
+def test_sync_meeting_handles_rider_with_multiple_starts():
+    # Regression test: syncing a rider who appears in more than one start used to
+    # raise sqlalchemy.exc.IntegrityError (UNIQUE constraint failed: riders.id).
+    from app.sync import sync_meeting
+
+    db = SessionLocal()
+    try:
+        with patched_sync(rows=MULTI_START_RIDER_ROWS):
+            sync_meeting(db, "69835")
+
+        rider = db.get(models.Rider, 5627476)
+        assert rider.name == "Rigmor Gabrielle Kousted Jessen"
+
+        assert db.get(models.Start, 17949729) is not None
+        assert db.get(models.Start, 17949730).horse_name == "Cassidy"
     finally:
         db.close()
 

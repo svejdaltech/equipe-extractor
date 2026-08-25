@@ -40,39 +40,54 @@ def sync_meeting(db: Session, meeting_id: str) -> None:
     meeting.start_on = info["start_on"]
     meeting.synced_at = datetime.now(timezone.utc)
 
-    synced_start_ids = set()
-
+    # De-duplicate by primary key before touching the DB: a rider commonly appears
+    # in several rows (one per class they're starting in), and db.get() inside a
+    # single loop doesn't reliably see a not-yet-flushed object added earlier in
+    # that same loop — looping straight over `rows` here caused duplicate INSERTs
+    # (UNIQUE constraint failures) for any rider with more than one start.
+    riders_by_id = {}
+    starts_by_id = {}
     for row in rows:
         rider_id = row.get("rider_id")
         start_id = row.get("id")
         if rider_id is None or start_id is None:
             continue
-        synced_start_ids.add(start_id)
 
+        riders_by_id[rider_id] = {
+            "name": row.get("rider_name"),
+            "club_name": row.get("club_name"),
+        }
+        starts_by_id[start_id] = {
+            "meeting_id": meeting_id_int,
+            "rider_id": rider_id,
+            "horse_id": row.get("horse_id"),
+            "horse_name": row.get("horse_name"),
+            "class_section_id": row.get("class_section_id"),
+            "class_no": row.get("class_no"),
+            "competition_name": row.get("competition_name"),
+            "start_no": row.get("start_no"),
+            "start_at": _parse_dt(row.get("start_at")),
+        }
+
+    for rider_id, fields in riders_by_id.items():
         rider = db.get(models.Rider, rider_id)
         if rider is None:
             rider = models.Rider(id=rider_id)
             db.add(rider)
-        rider.name = row.get("rider_name")
-        rider.club_name = row.get("club_name")
+        rider.name = fields["name"]
+        rider.club_name = fields["club_name"]
 
+    for start_id, fields in starts_by_id.items():
         start = db.get(models.Start, start_id)
         if start is None:
             start = models.Start(id=start_id)
             db.add(start)
-        start.meeting_id = meeting_id_int
-        start.rider_id = rider_id
-        start.horse_id = row.get("horse_id")
-        start.horse_name = row.get("horse_name")
-        start.class_section_id = row.get("class_section_id")
-        start.class_no = row.get("class_no")
-        start.competition_name = row.get("competition_name")
-        start.start_no = row.get("start_no")
-        start.start_at = _parse_dt(row.get("start_at"))
+        for key, value in fields.items():
+            setattr(start, key, value)
 
     stale_query = select(models.Start).where(models.Start.meeting_id == meeting_id_int)
-    if synced_start_ids:
-        stale_query = stale_query.where(models.Start.id.notin_(synced_start_ids))
+    if starts_by_id:
+        stale_query = stale_query.where(models.Start.id.notin_(starts_by_id.keys()))
     for stale_start in db.execute(stale_query).scalars().all():
         db.delete(stale_start)
 
