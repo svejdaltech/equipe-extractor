@@ -55,6 +55,13 @@ Tjeklisten (ryttere/starter/"set"-status) gemmes i en SQLite-fil. Sti sættes vi
 default er sqlite:///./equipe.db lokalt. I docker-compose peger den på et navngivet volume (/data),
 så data ikke forsvinder når containeren genskabes.
 
+#Excel-kolonner
+Kolonnerækkefølgen i Excel-eksporten kan styres via env var EXCEL_COLUMN_ORDER, kommasepareret liste
+af kolonnenavne, fx:
+EXCEL_COLUMN_ORDER=rider_name,horse_name,club_name,start_no,start_at
+Kolonner der ikke er nævnt, kommer efter i deres oprindelige rækkefølge. Uden env var sat bruges en
+fornuftig default (competition_name, start_time, class_no, rider_name, horse_name, ...).
+
 #Kør programmet
 Kør programmet lokalt (ikke i docker):
 export AUTH_USERNAME=... AUTH_PASSWORD=...

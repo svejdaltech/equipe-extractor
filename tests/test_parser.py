@@ -99,6 +99,20 @@ def test_generate_excel_puts_preferred_columns_first():
         os.remove(file_path)
 
 
+def test_generate_excel_respects_excel_column_order_env_var(monkeypatch):
+    monkeypatch.setenv("EXCEL_COLUMN_ORDER", "horse_name,rider_name")
+    data = [{"rider_name": "A", "horse_name": "H", "extra_field": "x", "competition_name": "Test"}]
+
+    file_path = parser.generate_excel(data)
+    try:
+        import pandas as pd
+        df = pd.read_excel(file_path)
+        # Custom order first, then any columns not listed, in original order.
+        assert list(df.columns) == ["horse_name", "rider_name", "extra_field", "competition_name"]
+    finally:
+        os.remove(file_path)
+
+
 def test_generate_excel_sorts_rows_by_start_time():
     data = [
         {"rider_name": "Late", "start_at": "2025-01-01T12:00:00+00:00", "start_no": "5"},

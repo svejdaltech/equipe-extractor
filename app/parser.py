@@ -119,23 +119,32 @@ def generate_excel(data: list[dict]) -> str:
 
     import pandas as pd
 
-    preferred_columns = [
-    "competition_name",
-    "start_time",
-    "class_no",
-    "rider_name",
-    "horse_name",
-    "club_name",
-    "start_no",
-    "start_at",
-    "result_at",
-    "percent",
-    "rank",
-    "placed",
-    "class_section_id",
-    "class_section_state",
+    default_columns = [
+        "competition_name",
+        "start_time",
+        "class_no",
+        "rider_name",
+        "horse_name",
+        "club_name",
+        "start_no",
+        "start_at",
+        "result_at",
+        "percent",
+        "rank",
+        "placed",
+        "class_section_id",
+        "class_section_state",
     ]
 
+    # EXCEL_COLUMN_ORDER lets the column order be tuned via env var (e.g. in
+    # .env) instead of a code change — comma-separated column names, e.g.
+    # "rider_name,horse_name,club_name". Unlisted columns still appear
+    # afterwards, same as the default order's fallback behaviour.
+    env_order = os.environ.get("EXCEL_COLUMN_ORDER")
+    if env_order:
+        preferred_columns = [c.strip() for c in env_order.split(",") if c.strip()]
+    else:
+        preferred_columns = default_columns
 
     if not data:
         logger.warning("generate_excel called with no data")
