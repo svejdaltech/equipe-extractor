@@ -1,3 +1,4 @@
+import json
 from unittest.mock import patch
 
 import pytest
@@ -51,3 +52,15 @@ def test_export_returns_502_on_upstream_error(client):
 
     assert r.status_code == 502
     assert "Equipe is down" in r.json()["detail"]
+
+
+def test_embed_json_escapes_script_close_tag():
+    # A rider/horse/club name from Equipe containing "</script>" must not be able
+    # to break out of the inline <script> block the checklist template embeds it in.
+    from app.main import _embed_json
+
+    payload = {"name": "</script><script>alert(1)</script>"}
+    result = _embed_json(payload)
+
+    assert "</script>" not in result
+    assert json.loads(result.replace("<\\/", "</")) == payload

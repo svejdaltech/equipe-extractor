@@ -1,9 +1,10 @@
 from datetime import datetime, timezone
 
+from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app import models
-from app.parser import get_meeting_info, parse_schedule
+from app.parser import fetch_schedule, get_meeting_info_from_schedule, parse_schedule_from_data
 
 
 def _parse_dt(value):
@@ -20,9 +21,15 @@ def _parse_dt(value):
 
 
 def sync_meeting(db: Session, meeting_id: str) -> None:
-    """Fetch a meeting from Equipe and upsert its riders/starts into the DB."""
-    info = get_meeting_info(meeting_id)
-    rows = parse_schedule(meeting_id)
+    """Fetch a meeting from Equipe and upsert its riders/starts into the DB.
+
+    Also removes any Start rows for this meeting that are no longer present in the
+    freshly fetched schedule (e.g. a rider who scratched), so the checklist doesn't
+    keep showing withdrawn starts forever.
+    """
+    schedule = fetch_schedule(meeting_id)
+    info = get_meeting_info_from_schedule(schedule)
+    rows = parse_schedule_from_data(schedule)
 
     meeting_id_int = int(meeting_id)
     meeting = db.get(models.Meeting, meeting_id_int)
@@ -33,11 +40,14 @@ def sync_meeting(db: Session, meeting_id: str) -> None:
     meeting.start_on = info["start_on"]
     meeting.synced_at = datetime.now(timezone.utc)
 
+    synced_start_ids = set()
+
     for row in rows:
         rider_id = row.get("rider_id")
         start_id = row.get("id")
         if rider_id is None or start_id is None:
             continue
+        synced_start_ids.add(start_id)
 
         rider = db.get(models.Rider, rider_id)
         if rider is None:
@@ -59,5 +69,11 @@ def sync_meeting(db: Session, meeting_id: str) -> None:
         start.competition_name = row.get("competition_name")
         start.start_no = row.get("start_no")
         start.start_at = _parse_dt(row.get("start_at"))
+
+    stale_query = select(models.Start).where(models.Start.meeting_id == meeting_id_int)
+    if synced_start_ids:
+        stale_query = stale_query.where(models.Start.id.notin_(synced_start_ids))
+    for stale_start in db.execute(stale_query).scalars().all():
+        db.delete(stale_start)
 
     db.commit()

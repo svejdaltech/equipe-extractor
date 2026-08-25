@@ -34,7 +34,10 @@ def get_json(url):
         raise UpstreamError(f"Invalid JSON from {url}") from e
 
 
-def _fetch_schedule(meeting_id):
+def fetch_schedule(meeting_id):
+    """Fetch and return the raw meeting schedule JSON. Exposed for callers (like
+    app.sync) that need both get_meeting_info_from_schedule and
+    parse_schedule_from_data without fetching the same URL twice."""
     _validate_id(meeting_id, "meeting_id")
 
     meeting_url = f"https://online.equipe.com/api/v1/meetings/{meeting_id}/schedule"
@@ -51,8 +54,7 @@ def _fetch_schedule(meeting_id):
     return schedule
 
 
-def get_meeting_info(meeting_id):
-    schedule = _fetch_schedule(meeting_id)
+def get_meeting_info_from_schedule(schedule):
     return {
         "display_name": schedule.get("display_name") or schedule.get("name"),
         "start_on": schedule.get("start_on"),
@@ -60,9 +62,11 @@ def get_meeting_info(meeting_id):
     }
 
 
-def parse_schedule(meeting_id):
-    schedule = _fetch_schedule(meeting_id)
+def get_meeting_info(meeting_id):
+    return get_meeting_info_from_schedule(fetch_schedule(meeting_id))
 
+
+def parse_schedule_from_data(schedule):
     competitions_data = schedule.get("meeting_classes")
     if not isinstance(competitions_data, list):
         raise UpstreamError(f"Uventet format: 'meeting_classes' mangler eller er ikke en liste: {schedule}")
@@ -96,6 +100,10 @@ def parse_schedule(meeting_id):
                     competitions.append(enriched_row)  # tilføj kopi for hver section med resultater
 
     return competitions
+
+
+def parse_schedule(meeting_id):
+    return parse_schedule_from_data(fetch_schedule(meeting_id))
 
 
 def generate_excel(data: list[dict]) -> str:

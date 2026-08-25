@@ -535,6 +535,12 @@
   var toastEl = document.getElementById("toast");
   var toastTimer = null;
 
+  var ESCAPE_MAP = { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" };
+  function escapeHtml(value) {
+    if (value === null || value === undefined) return "";
+    return String(value).replace(/[&<>"']/g, function (c) { return ESCAPE_MAP[c]; });
+  }
+
   function fmtTime(iso) {
     var d = new Date(iso);
     return d.toLocaleTimeString("da-DK", { hour: "2-digit", minute: "2-digit" });
@@ -626,11 +632,11 @@
 
   function render() {
     var rows = starts.map(function (s) {
-      var r = riders[s.riderId] || { name: "Ukendt rytter", club: null };
+      var r = riders[s.riderId] || {};
       return {
         riderId: s.riderId,
-        name: r.name,
-        club: r.club,
+        name: r.name || "Ukendt rytter",
+        club: r.club || null,
         horse: s.horse,
         startNo: s.startNo,
         classNo: s.classNo,
@@ -669,10 +675,10 @@
       li.className = "row" + (row.status.key === "missed" ? " is-attention" : "");
       var countTag = riderStartCount(row.riderId) > 1 ? '<span class="count-tag">(' + riderStartCount(row.riderId) + ' starter)</span>' : "";
       li.innerHTML =
-        '<div class="cell-time"><span class="start-no">#' + (row.startNo || "") + '</span><span class="start-time">' + (row.startAt ? fmtTime(row.startAt) : "—") + '</span></div>' +
-        '<div class="cell-class"><span class="class-name">Kl. ' + (row.classNo || "?") + ' · ' + (row.className || "") + '</span></div>' +
-        '<div class="cell-rider"><div class="rider-name">' + row.name + countTag + '</div><div class="horse-name">' + (row.horse || "") + '</div></div>' +
-        '<div class="cell-club"><span class="club-name">' + (row.club || "—") + '</span></div>' +
+        '<div class="cell-time"><span class="start-no">#' + escapeHtml(row.startNo || "") + '</span><span class="start-time">' + (row.startAt ? fmtTime(row.startAt) : "—") + '</span></div>' +
+        '<div class="cell-class"><span class="class-name">Kl. ' + escapeHtml(row.classNo || "?") + ' · ' + escapeHtml(row.className || "") + '</span></div>' +
+        '<div class="cell-rider"><div class="rider-name">' + escapeHtml(row.name) + countTag + '</div><div class="horse-name">' + escapeHtml(row.horse || "") + '</div></div>' +
+        '<div class="cell-club"><span class="club-name">' + (row.club ? escapeHtml(row.club) : "—") + '</span></div>' +
         '<div class="cell-status">' + statusCellHtml(row) + '</div>';
       rowsList.appendChild(li);
     });

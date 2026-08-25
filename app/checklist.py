@@ -42,7 +42,11 @@ def get_checklist_data(db: Session, meeting_id: int) -> dict:
 
     seen_at = {str(rider_id): None for rider_id in rider_ids}
     for p in photographed_rows:
-        seen_at[str(p.rider_id)] = _photographed_at_iso(p.photographed_at)
+        # Defensive: only surface photographed rows for riders actually in this
+        # meeting's current starts, so a rider who's since scratched (or any other
+        # orphaned Photographed row) can't inflate the "X af Y set" count.
+        if p.rider_id in rider_ids:
+            seen_at[str(p.rider_id)] = _photographed_at_iso(p.photographed_at)
 
     start_rows = [
         {

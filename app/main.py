@@ -7,6 +7,7 @@ from fastapi import BackgroundTasks, Depends, FastAPI, HTTPException, Query, Req
 from fastapi.responses import FileResponse, HTMLResponse
 from fastapi.security import HTTPBasic, HTTPBasicCredentials
 from fastapi.templating import Jinja2Templates
+from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app import models
@@ -147,8 +148,17 @@ def mark_rider_seen(
     """
     Mark a rider as photographed now. Re-marking just refreshes the timestamp.
     """
-    if db.get(models.Rider, rider_id) is None:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Unknown rider_id {rider_id}")
+    has_start_in_meeting = db.execute(
+        select(models.Start.id).where(
+            models.Start.meeting_id == meeting_id,
+            models.Start.rider_id == rider_id,
+        )
+    ).first()
+    if has_start_in_meeting is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Rider {rider_id} has no start in meeting {meeting_id}",
+        )
 
     now = datetime.now(timezone.utc)
     photographed = db.get(models.Photographed, (meeting_id, rider_id))
