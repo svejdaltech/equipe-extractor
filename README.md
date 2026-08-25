@@ -64,9 +64,13 @@ Byg til docker:
 sudo docker build -t equipe-exporter .
 sudo docker run -it --rm -p 8000:80 -e AUTH_USERNAME=... -e AUTH_PASSWORD=... equipe-exporter
 
-Kør med docker-compose (læser AUTH_USERNAME/AUTH_PASSWORD fra en lokal .env fil, som ikke er tjekket ind i git):
+Kør med docker-compose (læser AUTH_USERNAME/AUTH_PASSWORD/CALENDAR_TOKEN m.fl. fra en lokal .env fil, som ikke er tjekket ind i git):
 docker compose up
 
-
-Byg til Azure Container registry
-az acr build --registry svejdaltech --image equipe-extractor .
+#Deploy til produktion
+Produktion (equipe.svejdaltech.dk) kører på en anden server end udvikling, direkte via docker/docker-compose
+(ikke Azure Container Registry — den er ikke længere i brug). På serveren:
+git pull
+docker compose up -d --build
+Husk at .env på serveren skal indeholde AUTH_USERNAME/AUTH_PASSWORD, og CALENDAR_TOKEN/PUBLIC_BASE_URL hvis
+kalender-feedet skal bruges (se #Kalender).
