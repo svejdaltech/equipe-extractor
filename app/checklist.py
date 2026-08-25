@@ -35,8 +35,28 @@ def get_checklist_data(db: Session, meeting_id: int) -> dict:
         select(models.Photographed).where(models.Photographed.meeting_id == meeting_id)
     ).scalars().all()
 
+    # Cross-meeting history: when did we last see this rider at a *different* event,
+    # so a photographer arriving at a new show can spot "I've shot them before, X ago"
+    # even before marking anyone seen today.
+    prior_seen_rows = db.execute(
+        select(models.Photographed).where(
+            models.Photographed.rider_id.in_(rider_ids),
+            models.Photographed.meeting_id != meeting_id,
+        )
+    ).scalars().all() if rider_ids else []
+
+    last_seen_before = {}
+    for p in prior_seen_rows:
+        current = last_seen_before.get(p.rider_id)
+        if current is None or p.photographed_at > current:
+            last_seen_before[p.rider_id] = p.photographed_at
+
     riders = {
-        str(r.id): {"name": r.name, "club": r.club_name}
+        str(r.id): {
+            "name": r.name,
+            "club": r.club_name,
+            "lastSeenBefore": _photographed_at_iso(last_seen_before[r.id]) if r.id in last_seen_before else None,
+        }
         for r in riders_rows
     }
 

@@ -343,6 +343,12 @@
     margin-top: 0.1rem;
   }
 
+  .prior-seen {
+    font-size: 0.72rem;
+    color: var(--ink-faint);
+    margin-top: 0.15rem;
+  }
+
   .club-name {
     font-size: 0.82rem;
     color: var(--ink-muted);
@@ -556,6 +562,26 @@
     return "for " + h + " t " + remM + " min. siden";
   }
 
+  function fmtRelativeDate(iso) {
+    var d = new Date(iso);
+    var now = new Date();
+    var startOfDay = function (x) { return new Date(x.getFullYear(), x.getMonth(), x.getDate()); };
+    var dayDiff = Math.round((startOfDay(now) - startOfDay(d)) / 86400000);
+
+    if (dayDiff <= 0) return "i dag";
+    if (dayDiff === 1) return "i går";
+    if (dayDiff < 7) return "for " + dayDiff + " dage siden";
+    if (dayDiff < 31) {
+      var weeks = Math.round(dayDiff / 7);
+      return "for " + weeks + (weeks === 1 ? " uge" : " uger") + " siden";
+    }
+    if (dayDiff < 365) {
+      var months = Math.round(dayDiff / 30);
+      return "for " + months + (months === 1 ? " måned" : " måneder") + " siden";
+    }
+    return d.toLocaleDateString("da-DK", { day: "numeric", month: "long", year: "numeric" });
+  }
+
   function riderEarliestStart(riderId) {
     var min = null;
     starts.forEach(function (s) {
@@ -637,6 +663,7 @@
         riderId: s.riderId,
         name: r.name || "Ukendt rytter",
         club: r.club || null,
+        lastSeenBefore: r.lastSeenBefore || null,
         horse: s.horse,
         startNo: s.startNo,
         classNo: s.classNo,
@@ -674,10 +701,13 @@
       var li = document.createElement("li");
       li.className = "row" + (row.status.key === "missed" ? " is-attention" : "");
       var countTag = riderStartCount(row.riderId) > 1 ? '<span class="count-tag">(' + riderStartCount(row.riderId) + ' starter)</span>' : "";
+      var priorSeenHtml = row.lastSeenBefore
+        ? '<div class="prior-seen">Tidligere set ' + escapeHtml(fmtRelativeDate(row.lastSeenBefore)) + '</div>'
+        : "";
       li.innerHTML =
         '<div class="cell-time"><span class="start-no">#' + escapeHtml(row.startNo || "") + '</span><span class="start-time">' + (row.startAt ? fmtTime(row.startAt) : "—") + '</span></div>' +
         '<div class="cell-class"><span class="class-name">Kl. ' + escapeHtml(row.classNo || "?") + ' · ' + escapeHtml(row.className || "") + '</span></div>' +
-        '<div class="cell-rider"><div class="rider-name">' + escapeHtml(row.name) + countTag + '</div><div class="horse-name">' + escapeHtml(row.horse || "") + '</div></div>' +
+        '<div class="cell-rider"><div class="rider-name">' + escapeHtml(row.name) + countTag + '</div><div class="horse-name">' + escapeHtml(row.horse || "") + '</div>' + priorSeenHtml + '</div>' +
         '<div class="cell-club"><span class="club-name">' + (row.club ? escapeHtml(row.club) : "—") + '</span></div>' +
         '<div class="cell-status">' + statusCellHtml(row) + '</div>';
       rowsList.appendChild(li);

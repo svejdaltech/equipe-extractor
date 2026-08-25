@@ -1,6 +1,7 @@
 import json
 import re
 from contextlib import contextmanager
+from datetime import datetime, timezone
 from unittest.mock import patch
 
 import pytest
@@ -100,6 +101,35 @@ def test_sync_meeting_handles_rider_with_multiple_starts():
 
         assert db.get(models.Start, 17949729) is not None
         assert db.get(models.Start, 17949730).horse_name == "Cassidy"
+    finally:
+        db.close()
+
+
+def test_checklist_shows_prior_seen_from_other_meeting():
+    from app.checklist import get_checklist_data
+    from app.sync import sync_meeting
+
+    db = SessionLocal()
+    try:
+        with patched_sync(rows=SAMPLE_ROWS):
+            sync_meeting(db, "69835")
+        db.add(models.Photographed(
+            meeting_id=69835,
+            rider_id=5627476,
+            photographed_at=datetime(2025, 6, 1, tzinfo=timezone.utc),
+        ))
+        db.commit()
+
+        other_meeting_rows = [{**SAMPLE_ROWS[0], "id": 99999999, "meeting_id": 70000}]
+        with patched_sync(rows=other_meeting_rows):
+            sync_meeting(db, "70000")
+
+        data = get_checklist_data(db, 70000)
+        assert data["riders"]["5627476"]["lastSeenBefore"].startswith("2025-06-01")
+
+        # Meeting 69835's own view has no *other*-meeting history to show yet.
+        data_a = get_checklist_data(db, 69835)
+        assert data_a["riders"]["5627476"]["lastSeenBefore"] is None
     finally:
         db.close()
 
